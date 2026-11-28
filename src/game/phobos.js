@@ -16,12 +16,14 @@ import { registerRegion } from './regions.js';
 import { BIOME_BY_ID } from '../data/biomes.js';
 import { SHEER } from '../data/sheer.js';
 import { depthLevel, FINAL_DEPTH, MAX_LEVEL } from '../data/depth.js';
-import { dropChest } from './loot.js';
+import { dropChest, GroundItem } from './loot.js';
+import { makeCovenant } from '../data/relics.js';
 import { loadBiomeArt, biomeTileSet } from '../core/assets.js';
 import { loadArtFor } from '../core/enemyart.js';
 import { makeMonster } from './monster.js';
 import { makeRaidBoss } from './raid.js';
-import { DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, guardianFor, wingLordFor, PHOBOS_FOLK, PHOBOS_BY_ID, FINALE, placeOf, placeLayout, BIBLE_BOSSES } from '../data/phobos.js';
+import { hit } from './combat.js';
+import { HULKING, DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, guardianFor, wingLordFor, captainFor, LIVERY, PHOBOS_FOLK, PHOBOS_BY_ID, FINALE, placeOf, placeLayout, BIBLE_BOSSES } from '../data/phobos.js';
 import { generatePhobos, PHOBOS_SEED, planX } from '../world/phobos.js';
 import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevelscour.js';
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
@@ -32,7 +34,7 @@ import { loadSpires3D } from '../gfx/spires3d.js';
 import { setupCityQuests, setupCastleQuests, questObjective } from './phobosquests.js';
 import { townObject } from '../world/town.js';
 import { phobosTalk, makeTalker } from './phobostalk.js';
-import { loadPhobosTex, phobosFloors, phobosProp, floorV, PH_V, phobosTexReady } from '../gfx/phobostex.js';
+import { loadPhobosTex, phobosFloors, phobosProp, floorV, PH_V, phobosTexReady, layGroundCover } from '../gfx/phobostex.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 
@@ -50,22 +52,27 @@ function mkBiome(id, name, src, fb, extra = {}) {
   BIOMES[id] = BIOME_BY_ID[id] = { ...B, id, name, phobos: true, overworld: false, region: true, ...extra };
   return BIOMES[id];
 }
-mkBiome('phobos_city', 'City State Phobos', 'ph_city', 'castle_keep', { dark: 0.62, light: 10 });
+mkBiome('phobos_city', 'City State Phobos', 'ph_city', 'castle_keep', { dark: 0.5, light: 11.5 });
+// the stone changes along the castle's walls: each wing's own pack and two more (core/assets.js moreWalls)
+const MORE_WALLS = { gatehouse: ['ph_castle', 'ph_keep'], oubliettes: ['ph_wall', 'ph_sewers'], armoury: ['ph_cinder', 'ph_wall'], greathall: ['ph_castle', 'ph_keep'], library: ['ph_rich', 'ph_keep'],
+  menagerie: ['ph_marches', 'ph_castle'], sanctuaries: ['ph_rich', 'ph_keep'], stormspire: ['ph_castle'], bonespire: ['ph_bones'], throne: ['ph_castle', 'ph_rich'] };
 for (const w of WINGS) {
-  mkBiome('cv_' + w.id, w.name, w.biome, w.base);
+  { const B0 = base(w.biome, w.base); mkBiome('cv_' + w.id, w.name, w.biome, w.base, { dark: Math.min(B0.dark ?? 0.7, 0.58), light: Math.max(B0.light || 8, 10.5), moreWalls: (MORE_WALLS[w.id] || []).filter((p) => p !== w.biome && BIOME_BY_ID[p]) }); }   // (lit a little: the great rooms are there to be seen)
   const S = SHEER.find((s) => s.id === (w.sheer || 'sheer_gilded'));
   if (S) mkBiome('cv_' + w.id + '_sheer', w.name, w.biome, w.base, { sheer: S, dark: S.dark, light: S.light, fog: S.fog, wallPack: null });
 }
 
 /** A level's looks drawn from a list of Phobos art (Act III levels field only their own). */
-function phobosLooks(arts) {
+function phobosLooks(arts, livery = null) {
   const pool = arts.filter(Boolean), used = new Set();
+  const lookOf = (a) => ({ art: a.id, swap: a.hk && livery ? livery.swap : null });   // the hulking knights wear the wing's colours
   return {
+    lookOf, livery,
     pickArt(rng) { const a = pool.length ? pool[Math.floor((rng ? rng.next() : Math.random()) * pool.length)] : null; if (a) used.add(a.id); return a; },
-    pick(arch) { const p = pool.filter((a) => a.arch === arch); const a = p.length ? pick(p) : pick(pool); if (!a) return null; used.add(a.id); return { art: a.id, swap: null }; },
-    boss() { const a = pick(pool); return a ? { arch: a.arch, look: { art: a.id, swap: null } } : null; },
+    pick(arch) { const p = pool.filter((a) => a.arch === arch); const a = p.length ? pick(p) : pick(pool); if (!a) return null; used.add(a.id); return lookOf(a); },
+    boss() { const a = pick(pool); return a ? { arch: a.arch, look: lookOf(a) } : null; },
     ids() { return [...used]; },
-    all() { return [...used].map((id) => ({ art: id, swap: null })); },
+    all() { return [...used].map((id) => lookOf(PHOBOS_BY_ID[id])); },
     add(id) { used.add(id); },
   };
 }
@@ -83,7 +90,7 @@ const cityRegion = registerRegion({
     if (!cityCache) cityCache = generatePhobos(biome, biomeTileSet(biome), PHOBOS_SEED);   // one city for every visit: built once a session
     const g = cityCache; g.map.seen.fill(0);
     const all = DISTRICTS.flatMap((d) => [...d.foes, ...d.bosses.filter(Boolean)]);
-    g.looks = phobosLooks(all);
+    g.looks = phobosLooks(all, LIVERY.gold);
     for (const a of all) g.looks.add(a.id);
     g.roster = [...new Set(all.map((a) => a.arch))];
     void seed; return g;
@@ -95,13 +102,13 @@ const cityRegion = registerRegion({
 });
 const castleRegion = {
   words: [], portal: 'Castle Velscour: a hundred floors climbing to the Throne Above.', townLine: 'The stair climbs on into <b>Castle Velscour</b>.',
-  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadPhobosTex(), loadBiomeArt(biome), G.phobosLayout === 'spires' ? loadSpires3D().catch((e) => console.warn('Spires 3D', e)) : null, loadArtFor([...w.foes.map((a) => a.id), guardianFor(f).id, ...(wingLordFor(f) ? [wingLordFor(f).id] : []), ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
+  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadPhobosTex(), loadBiomeArt(biome), G.phobosLayout === 'spires' ? loadSpires3D().catch((e) => console.warn('Spires 3D', e)) : null, loadArtFor([...w.foes.map((a) => a.id), ...w.knights.map((a) => a.id), ...(captainFor(f) ? [captainFor(f).id] : []), guardianFor(f).id, ...(wingLordFor(f) ? [wingLordFor(f).id] : []), ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
   ready: () => true,
   generate(depth, biome, seed) {
     const f = G.phobosFloor || 1, w = wingOf(f), layout = G.phobosLayout || w.layouts[(f - 1) % w.layouts.length];
-    const looks = phobosLooks(w.foes);
+    const looks = phobosLooks([...w.foes, ...w.knights, ...w.knights], LIVERY[w.color]);   // (the household knights are a good third of every garrison)
     const raid = f % 10 === 0;
-    for (let k = 0; k < 6; k++) { try { const g = generateCastleFloor(f, layout, biome, biomeTileSet(biome), (seed + k * 7919) >>> 0, { raid, looks }); textureFloor(g, w); dressFloor(g, w); g.looks = looks; g.roster = [...new Set(w.foes.map((a) => a.arch))]; return g; } catch (e) { if (k === 5) throw e; } }
+    for (let k = 0; k < 6; k++) { try { const g = generateCastleFloor(f, layout, biome, biomeTileSet(biome), (seed + k * 7919) >>> 0, { raid, looks, color: w.color }); textureFloor(g, w); dressFloor(g, w); g.looks = looks; g.roster = [...new Set([...w.foes, ...w.knights].map((a) => a.arch))]; g.wing = w; return g; } catch (e) { if (k === 5) throw e; } }
   },
   createRun: (world, gen, biome, depth) => createCastleRun(world, gen, biome, depth),
   intro: (world, gen) => `${escapeHtml(world.biome.name)} — Floor ${G.phobosFloor}: <b>${escapeHtml(placeOf(G.phobosFloor))}</b> (${escapeHtml(gen.layoutName || '')}).`,
@@ -111,27 +118,28 @@ for (const id of Object.keys(BIOMES)) if (id.startsWith('cv_')) registerRegion({
 
 // each wing's rooms furnished for their use (the town pack's props): stacks in the library, anvils at the forge
 const WING_DRESS = {
-  gatehouse: ['tool_rack', 'crate_stack', 'closed_barrel', 'arrow_milestone'], oubliettes: ['rope_and_hook', 'stone_boundary', 'fieldstone_cluster', 'water_bucket'],
-  armoury: ['anvil_stump', 'cold_forge', 'smith_bellows', 'tool_rack', 'workbench'], greathall: ['market_table', 'market_table', 'stone_bench', 'closed_barrel', 'grain_sacks'],
-  library: ['scroll_rack', 'scroll_rack', 'workbench', 'potion_jars', 'stone_bench'], menagerie: ['hay_bale', 'horse_trough', 'water_barrel', 'rope_and_hook'],
-  sanctuaries: ['stone_bench', 'stone_bench', 'potion_jars', 'scroll_rack'], stormspire: ['crate_stack', 'rope_and_hook'], bonespire: ['fieldstone_cluster', 'stone_boundary'],
-  throne: ['stone_bench', 'cloth_crate', 'potion_jars'],
+  // ('ph:' = the dressing's own furniture, gfx/phobostex.js: suits of plate, braziers, his V on standards in the wing's livery)
+  gatehouse: ['ph:armour_stand', 'tool_rack', 'ph:standard', 'crate_stack', 'ph:brazier', 'closed_barrel', 'arrow_milestone'], oubliettes: ['rope_and_hook', 'ph:sarcophagus', 'ph:brazier', 'stone_boundary', 'ph:standard', 'water_bucket'],
+  armoury: ['anvil_stump', 'ph:armour_stand', 'cold_forge', 'ph:standard', 'smith_bellows', 'ph:brazier', 'tool_rack', 'workbench'], greathall: ['ph:standard', 'market_table', 'ph:brazier', 'stone_bench', 'ph:armour_stand', 'closed_barrel', 'grain_sacks'],
+  library: ['scroll_rack', 'ph:lectern', 'ph:standard', 'workbench', 'ph:candle_stand', 'potion_jars', 'stone_bench'], menagerie: ['hay_bale', 'ph:standard', 'horse_trough', 'ph:brazier', 'water_barrel', 'rope_and_hook'],
+  sanctuaries: ['ph:candle_stand', 'ph:standard', 'stone_bench', 'ph:sarcophagus', 'ph:font', 'ph:lectern'], stormspire: ['crate_stack', 'rope_and_hook'], bonespire: ['fieldstone_cluster', 'stone_boundary'],
+  throne: ['ph:standard', 'ph:armour_stand', 'ph:brazier', 'ph:obelisk', 'ph:candle_stand', 'stone_bench'],
 };
 function dressFloor(g, w) {
   const list = WING_DRESS[w.id], m = g.map; if (!list || !A.town || m.sheer) return;
   const k = TW / A.town.meta.tile[0];
   for (const r of g.rooms || []) {
-    if (r.w < 6 || r.h < 6 || r === g.raid) continue;
+    if (r.w < 6 || r.h < 6 || r === g.raid || r.bare) continue;
     const n = Math.min(10, Math.round((r.w + r.h) / 4));
     for (let j = 0; j < n; j++) {
       const side = j % 4, u = 1 + Math.random() * (side < 2 ? r.w - 2 : r.h - 2);
       const x = side < 2 ? r.x + u : side === 2 ? r.x + 1.2 : r.x + r.w - 1.2, y = side < 2 ? (side ? r.y + r.h - 1.2 : r.y + 1.2) : r.y + u;
-      const i = Math.floor(y) * m.w + Math.floor(x), spr = townObject(list[j % list.length]);
+      const nm = list[j % list.length], own = nm.startsWith('ph:'), i = Math.floor(y) * m.w + Math.floor(x), spr = own ? phobosProp(nm === 'ph:standard' ? 'standard_' + w.color : nm.slice(3)) : townObject(nm);
       const tx = Math.floor(x), ty = Math.floor(y);
-      if (!spr || !m.t[i] || m.block[i]) continue;
+      if (!spr || !m.t[i] || m.block[i] || [g.exit, g.start, g.guardian].some((q) => q && Math.abs(q[0] - tx - 0.5) < 2.2 && Math.abs(q[1] - ty - 0.5) < 2.2)) continue;   // (never on the stair, the way in or the lord)
       // never in a doorway: no open floor beside it outside the room
       if ([[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]].some(([dx, dy]) => { const X = tx + dx, Y = ty + dy; return (X < r.x || Y < r.y || X >= r.x + r.w || Y >= r.y + r.h) && m.t[Y * m.w + X]; })) continue;
-      g.props.push({ kind: 'scatter', x, y, spr, k, flip: Math.random() < 0.5 }); m.block[i] = 1;
+      g.props.push({ kind: 'scatter', x: own ? tx + 0.5 : x, y: own ? ty + 0.5 : y, spr, k: own ? TW / 160 : k, flip: Math.random() < 0.5, fixed: own }); m.block[i] = 1;
     }
   }
 }
@@ -150,6 +158,13 @@ function textureFloor(g, w) {
   const [hall, room] = WING_FLOOR[w.id] || WING_FLOOR.gatehouse, inRoom = new Uint8Array(m.w * m.h);
   for (const r of g.rooms || []) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (x >= 0 && y >= 0 && x < m.w && y < m.h) inRoom[y * m.w + x] = 1;
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { const i = y * m.w + x; if (m.t[i]) m.v[i] = floorV(inRoom[i] ? room : hall, x, y); }
+  // the wing's livery underfoot, not overpowering: a rug in some rooms; and what the great rooms lay themselves (carpet
+  // down the aisles and tunnels, sand in the stadium, a garth's dead grass)
+  const CARPET = 'carpet_' + w.color, OVER = { carpet: CARPET, sand: 'arena_sand', garth: 'dead_grass' };
+  const lay = (x, y, n) => { const i = y * m.w + x; if (x > 0 && y > 0 && x < m.w && y < m.h && m.t[i]) m.v[i] = floorV(n, x, y); };
+  for (const r of g.rooms || []) if (!r.bare && !r.shape && r !== g.raid && r.w >= 9 && r.h >= 9 && (r.idx * 7 + (G.phobosFloor || 0)) % 3 === 0) for (let y = r.y + 3; y < r.y + r.h - 3; y++) for (let x = r.x + 3; x < r.x + r.w - 3; x++) lay(x, y, CARPET);
+  for (const [x, y, n] of g.floorOver || []) lay(x, y, OVER[n] || n);
+  layGroundCover(m, { patches: 0.03 });
   g.phTex = true;
   const kinds = WING_SHELVES[w.id]; if (!kinds || !kinds.length) return;
   const k = TW / 160, doorway = (r, tx, ty) => [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]].some(([dx, dy]) => { const X = tx + dx, Y = ty + dy; return (X < r.x || Y < r.y || X >= r.x + r.w || Y >= r.y + r.h) && m.t[Y * m.w + X]; });
@@ -178,9 +193,46 @@ const note = (o) => { if (!G.autoplayOn) return UI.dialog(o); UI.log(`<b>${o.tit
 function townPortalTo(world, game) {
   for (const p of world.portals) if (p.type === 'town') { p.label = 'Town Portal — Bellmourn'; p.use = () => UI.dialog({ title: 'Return to Bellmourn?', html: '<p>The portal opens on Bellmourn, the town under the bells.</p>', buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); game.enterBellmourn(); } }] }); }
 }
+// Act III is the hard end of the game: its rank and file hit like guardians elsewhere and its lords far harder, more
+// the higher the floor (t = floor / 100). A hero in ordinary gear of his level dies here; the wings' own Covenants
+// (data/relics.js, the Household sets) and the levels won on the way are what carry him up.
+const HARD = { trash: [2.2, 1.4, 1.3, 0.4], ward: [3.2, 0, 1.7, 0], captain: [5, 4, 2.0, 0.7], guardian: [6.5, 5, 2.1, 0.7], raid: [5, 4, 2.0, 0.8], velscour: [12, 0, 3.2, 0] };
+export const act3Hard = (kind, t = 0) => { const H = HARD[kind] || HARD.trash; return [H[0] + H[1] * t, H[2] + H[3] * t]; };
+export function harden(m, kind, t = 0) {
+  if (!m || m.act3) return m;
+  const [hp, dm] = act3Hard(kind, t);
+  m.maxHp = Math.round(m.maxHp * hp); m.hp = m.maxHp; m.dmg *= dm; m.xp = Math.round((m.xp || 0) * (1 + (hp - 1) * 0.45)); m.act3 = kind;
+  return m;
+}
+/** No lord of Act III falls in a breath: each has a ward that takes a share of his life a second in full (a captain
+ *  6%, a guardian 5%, a ward lord 7%, a wing's raid boss 2.2%, Lord Velscour 1.2%); past that only a sixth of a blow
+ *  gets through, and the ward shows ("Warded") so the player sees why. Better gear still ends the fight sooner.
+ *  (combat.js asks m.pace for what a blow may take.) */
+const TEMPO = { captain: 0.06, guardian: 0.05, ward: 0.07, raid: 0.022, velscour: 0.012 };
+function tempo(list) {
+  for (const [m, kind] of list) {
+    const rate = TEMPO[kind] || 0.05; let bank = m.maxHp * rate, at = G.time, told = -9;
+    m.pace = (dmg) => {
+      const now = G.time; bank = Math.min(m.maxHp * rate * 2, bank + m.maxHp * rate * Math.max(0, now - at)); at = now;
+      const full = Math.min(dmg, bank), d = full + (dmg - full) / 6; bank -= full;
+      if (dmg > full * 1.5 && now - told > 1.6) { told = now; floatText(m.x, m.y, 96, 'Warded', '#b0c8ff', 12, { life: 0.9 }); addEffect(new Ring(m.x, m.y, 0.6, 1.5, 0.35, '#8fb0ff', 3)); }
+      return d;
+    };
+  }
+  return () => {};
+}
+/** The lamps, braziers, candles and altars of the dressing are lit: lights round the hero each frame (vfx.addLight). */
+const LIT = { lamp_post: [3.6, 0.75, '#ffb060', 52], brazier: [3.4, 0.8, '#ff8a3a', 26], candle_stand: [2.6, 0.6, '#ffd890', 44], hall_table: [2.4, 0.5, '#ffd890', 24] };
+function propLights(props) {
+  const L = (props || []).map((p) => { const n = p.spr && p.spr.name, k = n && (LIT[n] || (n.startsWith('altar_') ? [3, 0.6, '#ffd890', 34] : null)); return k ? [p.x, p.y, k] : null; }).filter(Boolean);
+  return (p) => { for (const [x, y, k] of L) if (Math.abs(x - p.x) < 17 && Math.abs(y - p.y) < 17) addLight(x, y, k[0], k[1], k[3], k[2]); };
+}
+/** What Act III's levels pay: far better odds on rarity, Covenants and Sigils (game/loot.js reads these off the world). */
+function act3Loot(world, t) { world.mfAdd = (world.mfAdd || 0) + 80 + 140 * t; world.lootMul = (world.lootMul || 1) * 1.5; world.relicMul = (world.relicMul || 1) * (2.5 + 1.5 * t); world.act3Set = world.livery ? 'v_' + world.livery.id : 'v_gold'; }
 function spawnFoe(world, biome, art, level, rank, x, y) {
-  const m = makeMonster(world, art.arch, biome, level, rank, x, y, 0, { art: art.id, swap: null });
+  const m = makeMonster(world, art.arch, biome, level, rank, x, y, 0, { art: art.id, swap: art.hk ? (world.livery || LIVERY.gold).swap : null });
   applyPhobosKit(m, art);
+  harden(m, rank === 'boss' ? 'ward' : 'trash', world.castleFloor ? world.castleFloor / 100 : -0.2);   // (the city: the gentler end, 1.9x life and 1.4x blows)
   if (art.title && rank !== 'normal') m.name = art.name;
   world.add(m);
   return m;
@@ -194,7 +246,7 @@ function createCityRun(world, gen, biome, depth) {
   townPortalTo(world, game); clearFlight();
   // the road in wears the town pack's ground: grass, meadow, a trampled verge, then dirt, mud and gravel by the moat
   world.extraFloors = phobosFloors(); world.extraBase = PH_V;   // (the town pack's ground stands in for Phobos's own if its atlas failed: phobosFloors)
-  world.phobos = true;
+  world.phobos = true; world.livery = LIVERY.gold; act3Loot(world, 0);
   world.roster = [...new Set(DISTRICTS.flatMap((d) => d.foes.map((a) => a.arch)))];
   const exit = world.portals.find((p) => p.type === 'exit');
   // the Castle Gate: closed until the wards are broken
@@ -252,7 +304,7 @@ function createCityRun(world, gen, biome, depth) {
   const placeAt = (x, y) => { const k = gen.district[world.map.tileIdx(x, y)], d = DISTRICTS[k]; if (!d) return { place: 'the road in' }; const L = lords.find((m) => !m.dead && m.wardDistrict === k); return { place: d.name, lord: L ? L.name : null }; };
   for (const L of lords) L.wardDistrict = L.district;
   const talk = phobosTalk(world, { placeOf: placeAt, folk, errands: (S.errands ||= {}), homes: (n) => gen.spots[DISTRICTS.indexOf(n.district)], questDistrict: (n) => DISTRICTS.indexOf(n.district) });
-  const pq = setupCityQuests(world, gen, S);
+  const pq = setupCityQuests(world, gen, S), pace = tempo(lords.map((m) => [m, 'ward'])), lamps = propLights(gen.props);
   let respawnT = 60;
   const run = {
     title: 'City State Phobos', description: 'Break the ward lords to open the Castle Gate.', active: true, completed: false, failed: false, markers: [], phobosCity: true,
@@ -267,7 +319,7 @@ function createCityRun(world, gen, biome, depth) {
     },
     update(dt) {
       const p = world.player; if (!p) return;
-      talk(dt); pq.update(dt);
+      talk(dt); pq.update(dt); pace(dt); lamps(p);
       // gray residents who turn
       for (const n of folk) if (n.turns && !n.turned && dist(n.x, n.y, p.x, p.y) < 3) {
         n.turned = true; n.hidden = true;
@@ -318,33 +370,37 @@ const HUB_LINES = {
 function createCastleRun(world, gen, biome, depth) {
   const c = G.char, S = phobosState(c), game = G.game, f = G.phobosFloor || 1, wing = wingOf(f);
   townPortalTo(world, game); clearFlight();
-  world.phobos = true; world.castleFloor = f;
+  world.phobos = true; world.castleFloor = f; world.livery = LIVERY[wing.color]; act3Loot(world, f / 100);
+  const T = f / 100;
   if (!world.roster || !world.roster.length) world.roster = [...new Set(wing.foes.map((a) => a.arch))];
   S.floor = Math.max(S.floor || 0, f);
   const exit = world.portals.find((p) => p.type === 'exit');
   exit.label = 'Sealed Stair — slay the guardian';
   const lvl = Math.min(MAX_LEVEL - 2, depthLevel(depth));   // bosses at most MAX_LEVEL + 2
   // the floor's lord: Velscour (100), a wing's raid boss (every 10th), a castle boss (every 5th), else a captain
-  let boss;
+  let boss, law = null;
   if (f === CASTLE_FLOORS) {
     const order = ['crimson', 'obsidian', 'cathedral'], v = G.velscourVariant || order[(S.vWins || 0) % 3];
-    boss = makeRaidBoss(world, gen.raid, depth, lvl + 4, { tpl: VELSCOUR_RAIDS[v], art: FINALE[v].forms[0], hp: 1.4, dmg: 1.05 });
-    boss.velscourBattle = v;
+    { const [hh, dd] = act3Hard('velscour'); boss = makeRaidBoss(world, gen.raid, depth, lvl + 4, { tpl: VELSCOUR_RAIDS[v], art: FINALE[v].forms[0], hp: 1.4 * hh, dmg: 1.05 * dd }); }
+    boss.velscourBattle = v; law = velscourLaw(world, boss, gen.raid, v, biome, lvl);
   } else if (f % 10 === 0) {
     const tpl = WING_RAIDS[wing.boss] || WING_RAIDS.latch;
-    boss = makeRaidBoss(world, gen.raid, depth, lvl + 3, { tpl, art: tpl.art[0] });
+    const [hh, dd] = act3Hard('raid', T); boss = makeRaidBoss(world, gen.raid, depth, lvl + 3, { tpl, art: tpl.art[0], hp: hh, dmg: dd });
   } else {
-    const lord = f % 5 === 0 ? null : wingLordFor(f), art = f % 5 === 0 ? guardianFor(f) : lord || pick(wing.foes), [x, y] = gen.guardian || gen.exit;
-    boss = makeMonster(world, art.arch, biome, lvl + 2, 'boss', x, y, 0, { art: art.id, swap: null });
+    const lord = f % 5 === 0 ? null : wingLordFor(f), art = f % 5 === 0 ? guardianFor(f) : lord || captainFor(f) || pick(wing.foes), [x, y] = gen.guardian || gen.exit;
+    boss = makeMonster(world, art.arch, biome, lvl + 2, 'boss', x, y, 0, { art: art.id, swap: art.hk ? LIVERY[wing.color].swap : null });
     boss.name = BIBLE_BOSSES[f] || art.name; if (f % 5 === 0) { boss.maxHp *= 1.5; boss.hp = boss.maxHp; boss.title = art.title || 'Guardian of the Castle'; }
     else if (lord) { boss.maxHp *= 1.3; boss.hp = boss.maxHp; boss.title = 'A Lord of ' + wing.name.replace(/^The /, 'the '); }   // a wing's own horror lord
+    harden(boss, f % 5 === 0 ? 'guardian' : 'captain', T);
     applyBossMechanics(boss, art, f % 5 === 0 ? 'guardian' : 'lord');
   }
   if (boss.raid) world.raid = boss.raid;
+  const lamps = propLights(gen.props);
+  const pace = tempo([[boss, f === CASTLE_FLOORS ? 'velscour' : f % 10 === 0 ? 'raid' : f % 5 === 0 ? 'guardian' : 'captain']]);
   world.add(boss); world.boss = boss;
   if (gen.phTex) { world.extraFloors = phobosFloors(); world.extraBase = PH_V; }
   // the castle's garrison talks too (the raid bosses keep their own voices)
-  for (const m of world.creatures) if (m.team === 'enemy' && !m.raid) { makeTalker(m); applyPhobosKit(m); }
+  for (const m of world.creatures) if (m.team === 'enemy' && !m.raid) { makeTalker(m); applyPhobosKit(m); if (m !== boss) harden(m, 'trash', T); }
   const pq = setupCastleQuests(world, gen, S, f, wing);
   const talk = phobosTalk(world, { placeOf: () => ({ place: placeOf(f), lord: boss.name }) });
   // leap stones and swing chains
@@ -360,7 +416,7 @@ function createCastleRun(world, gen, biome, depth) {
       if (!next) return undefined;
       return { x: next.x, y: next.y, reach: 0.6 };
     },
-    update(dt) { questTick(dt); talk(dt); pq.update(dt); },
+    update(dt) { questTick(dt); talk(dt); pq.update(dt); if (law) law(dt); pace(dt); if (world.player) lamps(world.player); },
     questHtml(step) {
       let h = `<div class="q-title">Castle Velscour &middot; Floor ${f}/${CASTLE_FLOORS} <span class="dim">(${escapeHtml(wing.name)})</span></div><div class="dim">${escapeHtml(placeOf(f))} &middot; wing ${((f - 1) % 10) + 1}/10</div>`;
       const goal = Math.min(CASTLE_FLOORS, Math.ceil(f / 10) * 10);
@@ -382,6 +438,8 @@ function createCastleRun(world, gen, biome, depth) {
     if (first && f % 10 === 0) { c.skillPoints = (c.skillPoints || 0) + 1; UI.log('+1 skill point for breaking a wing of Castle Velscour.', '#ffd860'); }
     // the hoard: a raid boss always leaves rare chests (more the first time), a castle boss one
     const hoard = f === CASTLE_FLOORS ? 4 : f % 10 === 0 ? (first ? 3 : 2) : f % 5 === 0 ? 1 : 0;
+    // and a piece of the wing's Household set from every lord (two from a wing's raid boss, three from Velscour)
+    for (let i = 0, n = f === CASTLE_FLOORS ? 3 : f % 10 === 0 ? 2 : 1; i < n; i++) { const it = makeCovenant(Math.max(60, lvl + 2), { setId: world.act3Set }); if (it) world.addLoot(new GroundItem(m.x + rand(-0.8, 0.8), m.y + rand(-0.8, 0.8), 'item', { item: it })); }
     for (let i = 0; i < hoard; i++) { const a = (i / Math.max(1, hoard)) * TAU, [hx, hy] = world.map.randomNear(m.x + Math.cos(a) * 2, m.y + Math.sin(a) * 2, 1.5) || [m.x, m.y]; dropChest(world, { x: hx, y: hy, rare: true }, depth); }
     UI.centerMsg(m.raid ? `${(m.raid.tpl.name || m.name).toUpperCase()} FALLS` : 'GUARDIAN SLAIN', f === CASTLE_FLOORS ? 'The world shudders' : first ? `Floor ${f + 1} opens` : 'The stair is open', 3.5);
     if (f === CASTLE_FLOORS) velscourFalls(m.velscourBattle || 'crimson');
@@ -394,6 +452,66 @@ function createCastleRun(world, gen, biome, depth) {
   };
   UI.centerMsg(placeOf(f).split(':')[0].toUpperCase(), f % 10 === 1 ? `${wing.name} · a waypoint in Bellmourn now leads here` : `Floor ${f} · ${wing.name}`, 3);
   return run;
+}
+
+/** Lord Velscour's three battles each keep a law of their own for the whole fight, over and above their phases
+ *  (game/phobosraids.js VELSCOUR_RAIDS): no two are fought the same way.
+ *  - The Crimson Dynasty, the Blood Tithe: his household bleeds for him. Crimson Gate knights march in every 26 s and
+ *    he heals while one stands; he heals too while the hero keeps his distance. Kill the knights, stay on him.
+ *  - The Obsidian Eclipse, the Event Horizon: the arena's middle pulls, harder each phase, and every 22 s the horizon
+ *    closes: all ground past seven paces of the middle is unmade. Fight in the eye.
+ *  - The Cathedral of Ruin, the Toll: the great bell tolls every 15 s (sooner each phase). Only the lee of one of the
+ *    four pillars is safe from it.
+ *  Each law is a hazard with an autoGoal, so auto-play walks to the safe ground on the warning (autoplay.js mechGoal)
+ *  and goes for the Tithe-Knights; the safe ground stays lit through the warning. */
+function velscourLaw(world, v, arena, battle, biome, lvl) {
+  let t = 0, warn = 0, guards = [], mark = 0;
+  const pi = () => (v.raid ? v.raid.pi || 0 : 0), P = () => world.player;
+  const on = () => { const p = P(); return p && !p.dead && !v.dead && v.hp < v.maxHp && dist(p.x, p.y, arena.cx, arena.cy) < 24; };
+  const mend = (f, dt) => { v.hp = Math.min(v.maxHp, v.hp + v.maxHp * f * dt); };
+  // a law's blow is a share of the hero's life, less his damage reduction and his resistance to its element (gear answers it)
+  const smite = (f, el, stun) => { const p = P(), st = p.st || {}, k = clamp(1 - ((st.reduce || 0) + (st['res' + el[0].toUpperCase() + el.slice(1)] ?? st.resAll ?? 0) * 0.5) / 100, 0.35, 1); hit(v, p, p.maxHp * f * k, el, { force: true, crit: false }); if (stun && !p.dead) p.status.stun = { t: stun }; camera.shake(7); };
+  const zone = (x, y, r, col, dt) => { if ((mark -= dt) <= 0) { mark = 0.3; addEffect(new Ring(x, y, r, r * 0.98, 0.45, col, 6)); addEffect(new Ring(x, y, 0.2, r, 0.45, col, 2)); } };   // the safe ground, kept lit through the warning
+  const law = { x: arena.cx, y: arena.cy, ground: true, goal: null, autoGoal() { return this.goal; }, draw() {}, update(dt) { tick(dt); return !v.dead; } };
+  let tick;
+  if (battle === 'crimson') {
+    const arts = HULKING.filter((a) => !a.boss && /Lower Ward/.test(a.at));
+    tick = (dt) => {
+      if (!on()) return; const p = P(); t += dt;
+      for (const g of guards) if (g.dead && !g.tithed) { g.tithed = true; const d = v.maxHp * 0.02; v.hp = Math.max(v.maxHp * 0.01, v.hp - d); floatText(v.x, v.y, 110, 'The tithe is broken!', '#ff8080', 14, { life: 1.4 }); addEffect(new Ring(v.x, v.y, 0.4, 3, 0.5, '#ff4050', 6)); }
+      guards = guards.filter((g) => !g.dead);
+      if (guards.length) mend(Math.min(0.007, 0.0025 * guards.length), dt);   // (always under his ward's 1.2% a second: the fight can be won with them up, slowly)
+      if (dist(p.x, p.y, v.x, v.y) > 11) mend(0.004, dt);
+      const g0 = guards[0]; law.goal = g0 ? { x: g0.x, y: g0.y, r: 2.5 } : null;   // auto-play: the Tithe-Knights first
+      if (t >= 26 && guards.length >= 4) t = 20;   // (never more than four standing: the next march waits)
+      if (t >= 26) {
+        t = 0; UI.centerMsg('THE BLOOD TITHE', 'His household bleeds for him: cut them down', 2.6); sfx('roar', 0.7);
+        for (let i = 0, n = Math.min(4 - guards.length, 2 + Math.min(2, pi())); i < n; i++) { const a = (i / n) * TAU + rand(0, 1), [x, y] = world.map.randomNear(arena.cx + Math.cos(a) * 9, arena.cy + Math.sin(a) * 7, 2) || [arena.cx, arena.cy]; const g = spawnFoe(world, biome, pick(arts), lvl, 'champion', x, y); g.name = 'Tithe-Knight'; guards.push(g); addEffect(new Column(x, y, '#ff2030', 0.7, 24, 260)); }
+      }
+      for (const g of guards) if (chance(dt * 3)) addEffect(new Ring(g.x, g.y, 0.2, 1.2, 0.5, '#ff2030', 3));
+    };
+  } else if (battle === 'obsidian') tick = (dt) => {
+    if (!on()) return; const p = P(); t += dt;
+    const d = dist(p.x, p.y, arena.cx, arena.cy);
+    if (d > 2.5 && !p.leaping) { const k = (0.45 + 0.3 * pi()) * dt / d, nx = p.x + (arena.cx - p.x) * k, ny = p.y + (arena.cy - p.y) * k; if (world.map.walkable(nx, ny)) { p.x = nx; p.y = ny; } }
+    if (!warn && t >= 22) { warn = 3.6; UI.centerMsg('EVENT HORIZON', 'The horizon closes: get inside the ring', 3); sfx('bell'); }
+    if (warn) { zone(arena.cx, arena.cy, 7, '#b080ff', dt); law.goal = { x: arena.cx, y: arena.cy, r: 5.5 }; }
+    if (warn && (warn -= dt) <= 0) { warn = 0; t = 0; law.goal = null; addEffect(new Ring(arena.cx, arena.cy, 7, 18, 0.6, '#c090ff', 9)); if (dist(p.x, p.y, arena.cx, arena.cy) > 7) { smite(0.34, 'shadow'); floatText(p.x, p.y, 80, 'Unmade!', '#c090ff', 15, { life: 1.4 }); } }
+  };
+  else {
+    const pillars = arena.pillars || [];
+    tick = (dt) => {
+      if (!on()) return; const p = P(); t += dt;
+      if (!warn && t >= 15 - 1.5 * pi()) { warn = 3.4; UI.centerMsg('THE TOLL', 'Stand in the lee of a pillar: the lit ground', 2.8); sfx('bell'); }
+      if (warn) { for (const [x, y] of pillars) zone(x, y, 3.8, '#ffe080', dt / pillars.length); const near = pillars.slice().sort((a, b) => dist(p.x, p.y, a[0], a[1]) - dist(p.x, p.y, b[0], b[1]))[0]; law.goal = near ? { x: near[0] + (p.x > near[0] ? 1.6 : -1.6), y: near[1] + (p.y > near[1] ? 1.6 : -1.6), r: 1.4 } : null; }
+      if (warn && (warn -= dt) <= 0) {
+        warn = 0; t = 0; law.goal = null; sfx('bell'); G.flash = 0.3; addEffect(new Ring(v.x, v.y, 0.5, 22, 0.7, '#fff0c0', 10));
+        if (!pillars.some(([x, y]) => dist(p.x, p.y, x, y) < 3.8)) { smite(0.28, 'holy', 0.6); floatText(p.x, p.y, 80, 'The Toll!', '#ffe080', 15, { life: 1.4 }); }
+      }
+    };
+  }
+  world.addHazard(law);
+  return () => {};
 }
 
 /** A leap stone or a swing chain: step on it and you are flung across the gap (game/sheer.js reads `leaping`). */

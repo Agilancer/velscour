@@ -1,0 +1,3302 @@
+[
+  {
+    "id": "hk_01_01_gatehook_bulwark",
+    "name": "Gatehook Bulwark",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "polehook and coffin pavise",
+    "sprite": "sprites/knight/hk_01_01_gatehook_bulwark.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      0,
+      0,
+      192,
+      176
+    ],
+    "art_rect": [
+      26,
+      33,
+      140,
+      130
+    ],
+    "sprite_pivot": [
+      50,
+      129
+    ],
+    "sheet_pivot": [
+      76,
+      162
+    ],
+    "native_height_ap": 130,
+    "suggested_world_height_px": 72,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_02_crimson_flange_guard",
+    "name": "Crimson Flange Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "eight-flanged mace",
+    "sprite": "sprites/knight/hk_01_02_crimson_flange_guard.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      192,
+      0,
+      192,
+      176
+    ],
+    "art_rect": [
+      221,
+      29,
+      134,
+      134
+    ],
+    "sprite_pivot": [
+      25,
+      133
+    ],
+    "sheet_pivot": [
+      246,
+      162
+    ],
+    "native_height_ap": 134,
+    "suggested_world_height_px": 74,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_03_cinder_gate_warplate",
+    "name": "Cinder Gate Warplate",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "long-handled crescent axe",
+    "sprite": "sprites/knight/hk_01_03_cinder_gate_warplate.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      384,
+      0,
+      192,
+      176
+    ],
+    "art_rect": [
+      409,
+      19,
+      141,
+      144
+    ],
+    "sprite_pivot": [
+      31,
+      143
+    ],
+    "sheet_pivot": [
+      440,
+      162
+    ],
+    "native_height_ap": 144,
+    "suggested_world_height_px": 80,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_04_bloodwax_ram_knight",
+    "name": "Bloodwax Ram Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "iron-hooded battering maul",
+    "sprite": "sprites/knight/hk_01_04_bloodwax_ram_knight.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      576,
+      0,
+      192,
+      176
+    ],
+    "art_rect": [
+      595,
+      26,
+      154,
+      137
+    ],
+    "sprite_pivot": [
+      30,
+      136
+    ],
+    "sheet_pivot": [
+      625,
+      162
+    ],
+    "native_height_ap": 137,
+    "suggested_world_height_px": 76,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_05_red_sluice_knight",
+    "name": "Red Sluice Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "serrated glaive",
+    "sprite": "sprites/knight/hk_01_05_red_sluice_knight.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      768,
+      0,
+      192,
+      176
+    ],
+    "art_rect": [
+      796,
+      25,
+      136,
+      138
+    ],
+    "sprite_pivot": [
+      26,
+      137
+    ],
+    "sheet_pivot": [
+      822,
+      162
+    ],
+    "native_height_ap": 138,
+    "suggested_world_height_px": 77,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_06_portcullis_splitter",
+    "name": "Portcullis Splitter",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "broad two-handed sword",
+    "sprite": "sprites/knight/hk_01_06_portcullis_splitter.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      0,
+      176,
+      192,
+      176
+    ],
+    "art_rect": [
+      23,
+      199,
+      146,
+      140
+    ],
+    "sprite_pivot": [
+      25,
+      139
+    ],
+    "sheet_pivot": [
+      48,
+      338
+    ],
+    "native_height_ap": 140,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_07_arterial_pike_guard",
+    "name": "Arterial Pike Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "forked boar pike and hand shield",
+    "sprite": "sprites/knight/hk_01_07_arterial_pike_guard.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      192,
+      176,
+      192,
+      176
+    ],
+    "art_rect": [
+      216,
+      204,
+      143,
+      135
+    ],
+    "sprite_pivot": [
+      34,
+      134
+    ],
+    "sheet_pivot": [
+      250,
+      338
+    ],
+    "native_height_ap": 135,
+    "suggested_world_height_px": 75,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_08_carmine_chainman",
+    "name": "Carmine Chainman",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "iron ball flail",
+    "sprite": "sprites/knight/hk_01_08_carmine_chainman.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      384,
+      176,
+      192,
+      176
+    ],
+    "art_rect": [
+      407,
+      196,
+      146,
+      143
+    ],
+    "sprite_pivot": [
+      42,
+      142
+    ],
+    "sheet_pivot": [
+      449,
+      338
+    ],
+    "native_height_ap": 143,
+    "suggested_world_height_px": 79,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_09_the_red_visor",
+    "name": "The Red Visor",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "heavy crossbow and belt case",
+    "sprite": "sprites/knight/hk_01_09_the_red_visor.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      576,
+      176,
+      192,
+      176
+    ],
+    "art_rect": [
+      606,
+      207,
+      132,
+      132
+    ],
+    "sprite_pivot": [
+      29,
+      131
+    ],
+    "sheet_pivot": [
+      635,
+      338
+    ],
+    "native_height_ap": 132,
+    "suggested_world_height_px": 73,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_01_10_vermilion_blocker",
+    "name": "Vermilion Blocker",
+    "kind": "knight",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red cloth, blackened steel, garnet edgework",
+    "weapon_brief": "heavy spiked buckler and short cleaver",
+    "sprite": "sprites/knight/hk_01_10_vermilion_blocker.png",
+    "sheet": "sheets/knight/01_lower_ward.png",
+    "cell": [
+      768,
+      176,
+      192,
+      176
+    ],
+    "art_rect": [
+      786,
+      198,
+      155,
+      141
+    ],
+    "sprite_pivot": [
+      37,
+      140
+    ],
+    "sheet_pivot": [
+      823,
+      338
+    ],
+    "native_height_ap": 141,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_01_knuckleforge_sentinel",
+    "name": "Knuckleforge Sentinel",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "twin sledge gauntlets",
+    "sprite": "sprites/knight/hk_02_01_knuckleforge_sentinel.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      0,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      33,
+      33,
+      141,
+      130
+    ],
+    "sprite_pivot": [
+      33,
+      129
+    ],
+    "sheet_pivot": [
+      66,
+      162
+    ],
+    "native_height_ap": 130,
+    "suggested_world_height_px": 72,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_02_brass_collar_warder",
+    "name": "Brass Collar Warder",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "double-bearded axe",
+    "sprite": "sprites/knight/hk_02_02_brass_collar_warder.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      208,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      236,
+      29,
+      152,
+      134
+    ],
+    "sprite_pivot": [
+      28,
+      133
+    ],
+    "sheet_pivot": [
+      264,
+      162
+    ],
+    "native_height_ap": 134,
+    "suggested_world_height_px": 74,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_03_ash_anvil_captain",
+    "name": "Ash-Anvil Captain",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "square striking hammer",
+    "sprite": "sprites/knight/hk_02_03_ash_anvil_captain.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      416,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      438,
+      19,
+      163,
+      144
+    ],
+    "sprite_pivot": [
+      34,
+      143
+    ],
+    "sheet_pivot": [
+      472,
+      162
+    ],
+    "native_height_ap": 144,
+    "suggested_world_height_px": 80,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_04_diecast_ranseur_guard",
+    "name": "Diecast Ranseur Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "tasseled ranseur",
+    "sprite": "sprites/knight/hk_02_04_diecast_ranseur_guard.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      624,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      647,
+      26,
+      162,
+      137
+    ],
+    "sprite_pivot": [
+      24,
+      136
+    ],
+    "sheet_pivot": [
+      671,
+      162
+    ],
+    "native_height_ap": 137,
+    "suggested_world_height_px": 76,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_05_furnace_lockbreaker",
+    "name": "Furnace Lockbreaker",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "chisel-headed poleaxe",
+    "sprite": "sprites/knight/hk_02_05_furnace_lockbreaker.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      832,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      860,
+      25,
+      152,
+      138
+    ],
+    "sprite_pivot": [
+      29,
+      137
+    ],
+    "sheet_pivot": [
+      889,
+      162
+    ],
+    "native_height_ap": 138,
+    "suggested_world_height_px": 77,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_06_gilt_channel_knight",
+    "name": "Gilt Channel Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "wide falchion",
+    "sprite": "sprites/knight/hk_02_06_gilt_channel_knight.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      0,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      30,
+      199,
+      147,
+      140
+    ],
+    "sprite_pivot": [
+      29,
+      139
+    ],
+    "sheet_pivot": [
+      59,
+      338
+    ],
+    "native_height_ap": 140,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_07_rivet_wall_protector",
+    "name": "Rivet Wall Protector",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "tall grey tower shield and thrusting estoc",
+    "sprite": "sprites/knight/hk_02_07_rivet_wall_protector.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      208,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      251,
+      204,
+      121,
+      135
+    ],
+    "sprite_pivot": [
+      54,
+      134
+    ],
+    "sheet_pivot": [
+      305,
+      338
+    ],
+    "native_height_ap": 135,
+    "suggested_world_height_px": 75,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_08_drossmask_maulman",
+    "name": "Drossmask Maulman",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "giant rectangular splitting maul",
+    "sprite": "sprites/knight/hk_02_08_drossmask_maulman.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      416,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      436,
+      196,
+      168,
+      143
+    ],
+    "sprite_pivot": [
+      36,
+      142
+    ],
+    "sheet_pivot": [
+      472,
+      338
+    ],
+    "native_height_ap": 143,
+    "suggested_world_height_px": 79,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_09_coalgrate_lance_guard",
+    "name": "Coalgrate Lance Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "reinforced lance",
+    "sprite": "sprites/knight/hk_02_09_coalgrate_lance_guard.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      624,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      642,
+      207,
+      172,
+      132
+    ],
+    "sprite_pivot": [
+      29,
+      131
+    ],
+    "sheet_pivot": [
+      671,
+      338
+    ],
+    "native_height_ap": 132,
+    "suggested_world_height_px": 73,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_02_10_tempered_hinge_glaiveguard",
+    "name": "Tempered Hinge Glaiveguard",
+    "kind": "knight",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "graphite-grey plate, aged-gold fittings, no blue",
+    "weapon_brief": "single hook glaive",
+    "sprite": "sprites/knight/hk_02_10_tempered_hinge_glaiveguard.png",
+    "sheet": "sheets/knight/02_armoury_and_forge.png",
+    "cell": [
+      832,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      852,
+      198,
+      167,
+      141
+    ],
+    "sprite_pivot": [
+      32,
+      140
+    ],
+    "sheet_pivot": [
+      884,
+      338
+    ],
+    "native_height_ap": 141,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_01_the_blue_folio_guard",
+    "name": "The Blue Folio Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "wide-bladed rapier and parrying dagger",
+    "sprite": "sprites/knight/hk_03_01_the_blue_folio_guard.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      0,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      49,
+      33,
+      125,
+      130
+    ],
+    "sprite_pivot": [
+      29,
+      129
+    ],
+    "sheet_pivot": [
+      78,
+      162
+    ],
+    "native_height_ap": 130,
+    "suggested_world_height_px": 72,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_02_indexplate_sentinel",
+    "name": "Indexplate Sentinel",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "thin forked spear",
+    "sprite": "sprites/knight/hk_03_02_indexplate_sentinel.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      224,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      250,
+      29,
+      171,
+      134
+    ],
+    "sprite_pivot": [
+      32,
+      133
+    ],
+    "sheet_pivot": [
+      282,
+      162
+    ],
+    "native_height_ap": 134,
+    "suggested_world_height_px": 74,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_03_silver_bookmark_lancer",
+    "name": "Silver Bookmark Lancer",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "backed cavalry lance",
+    "sprite": "sprites/knight/hk_03_03_silver_bookmark_lancer.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      448,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      466,
+      19,
+      187,
+      144
+    ],
+    "sprite_pivot": [
+      38,
+      143
+    ],
+    "sheet_pivot": [
+      504,
+      162
+    ],
+    "native_height_ap": 144,
+    "suggested_world_height_px": 80,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_04_chainfolio_knight",
+    "name": "Chainfolio Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "hinged book-shaped shields",
+    "sprite": "sprites/knight/hk_03_04_chainfolio_knight.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      672,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      721,
+      26,
+      126,
+      137
+    ],
+    "sprite_pivot": [
+      36,
+      136
+    ],
+    "sheet_pivot": [
+      757,
+      162
+    ],
+    "native_height_ap": 137,
+    "suggested_world_height_px": 76,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_05_azure_staple_swordsman",
+    "name": "Azure Staple Swordsman",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "heavy curved sword",
+    "sprite": "sprites/knight/hk_03_05_azure_staple_swordsman.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      896,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      922,
+      25,
+      171,
+      138
+    ],
+    "sprite_pivot": [
+      20,
+      137
+    ],
+    "sheet_pivot": [
+      942,
+      162
+    ],
+    "native_height_ap": 138,
+    "suggested_world_height_px": 77,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_06_the_quarto_executioner",
+    "name": "The Quarto Executioner",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "broad double-handed execution blade",
+    "sprite": "sprites/knight/hk_03_06_the_quarto_executioner.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      0,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      32,
+      199,
+      159,
+      140
+    ],
+    "sprite_pivot": [
+      53,
+      139
+    ],
+    "sheet_pivot": [
+      85,
+      338
+    ],
+    "native_height_ap": 140,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_07_archive_shelf_crasher",
+    "name": "Archive Shelf Crasher",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "studded two-handed club",
+    "sprite": "sprites/knight/hk_03_07_archive_shelf_crasher.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      224,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      256,
+      204,
+      160,
+      135
+    ],
+    "sprite_pivot": [
+      43,
+      134
+    ],
+    "sheet_pivot": [
+      299,
+      338
+    ],
+    "native_height_ap": 135,
+    "suggested_world_height_px": 75,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_08_royal_stacks_warder",
+    "name": "Royal Stacks Warder",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "upright silver halberd",
+    "sprite": "sprites/knight/hk_03_08_royal_stacks_warder.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      448,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      509,
+      196,
+      102,
+      143
+    ],
+    "sprite_pivot": [
+      36,
+      142
+    ],
+    "sheet_pivot": [
+      545,
+      338
+    ],
+    "native_height_ap": 143,
+    "suggested_world_height_px": 79,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_09_paged_square_shieldbearer",
+    "name": "Paged Square Shieldbearer",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "square shield and long knife",
+    "sprite": "sprites/knight/hk_03_09_paged_square_shieldbearer.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      672,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      713,
+      207,
+      142,
+      132
+    ],
+    "sprite_pivot": [
+      31,
+      131
+    ],
+    "sheet_pivot": [
+      744,
+      338
+    ],
+    "native_height_ap": 132,
+    "suggested_world_height_px": 73,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_03_10_lacquer_scroll_archer",
+    "name": "Lacquer Scroll Archer",
+    "kind": "knight",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue cloth and enamel, dark steel and silver, no gold or brass",
+    "weapon_brief": "enormous longbow and armored quiver",
+    "sprite": "sprites/knight/hk_03_10_lacquer_scroll_archer.png",
+    "sheet": "sheets/knight/03_ancient_library.png",
+    "cell": [
+      896,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      940,
+      198,
+      136,
+      141
+    ],
+    "sprite_pivot": [
+      46,
+      140
+    ],
+    "sheet_pivot": [
+      986,
+      338
+    ],
+    "native_height_ap": 141,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_01_hedgerow_iron_knight",
+    "name": "Hedgerow Iron Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "leaf-hook guisarme",
+    "sprite": "sprites/knight/hk_04_01_hedgerow_iron_knight.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      0,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      35,
+      33,
+      138,
+      130
+    ],
+    "sprite_pivot": [
+      26,
+      129
+    ],
+    "sheet_pivot": [
+      61,
+      162
+    ],
+    "native_height_ap": 130,
+    "suggested_world_height_px": 72,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_02_glass_bed_warden",
+    "name": "Glass Bed Warden",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "fencing sabre and domed shield",
+    "sprite": "sprites/knight/hk_04_02_glass_bed_warden.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      208,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      254,
+      29,
+      116,
+      134
+    ],
+    "sprite_pivot": [
+      13,
+      133
+    ],
+    "sheet_pivot": [
+      267,
+      162
+    ],
+    "native_height_ap": 134,
+    "suggested_world_height_px": 74,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_03_feral_gate_champion",
+    "name": "Feral Gate Champion",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "bronze-tined boar fork",
+    "sprite": "sprites/knight/hk_04_03_feral_gate_champion.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      416,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      436,
+      19,
+      168,
+      144
+    ],
+    "sprite_pivot": [
+      28,
+      143
+    ],
+    "sheet_pivot": [
+      464,
+      162
+    ],
+    "native_height_ap": 144,
+    "suggested_world_height_px": 80,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_04_vergeplate_guard",
+    "name": "Vergeplate Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "polehammer with animal beak",
+    "sprite": "sprites/knight/hk_04_04_vergeplate_guard.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      624,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      653,
+      26,
+      149,
+      137
+    ],
+    "sprite_pivot": [
+      21,
+      136
+    ],
+    "sheet_pivot": [
+      674,
+      162
+    ],
+    "native_height_ap": 137,
+    "suggested_world_height_px": 76,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_05_verdigris_fauchardier",
+    "name": "Verdigris Fauchardier",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "broad sweeping fauchard",
+    "sprite": "sprites/knight/hk_04_05_verdigris_fauchardier.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      832,
+      0,
+      208,
+      176
+    ],
+    "art_rect": [
+      856,
+      25,
+      159,
+      138
+    ],
+    "sprite_pivot": [
+      29,
+      137
+    ],
+    "sheet_pivot": [
+      885,
+      162
+    ],
+    "native_height_ap": 138,
+    "suggested_world_height_px": 77,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_06_mossjaw_plate_knight",
+    "name": "Mossjaw Plate Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "flat horned greataxe",
+    "sprite": "sprites/knight/hk_04_06_mossjaw_plate_knight.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      0,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      28,
+      199,
+      152,
+      140
+    ],
+    "sprite_pivot": [
+      26,
+      139
+    ],
+    "sheet_pivot": [
+      54,
+      338
+    ],
+    "native_height_ap": 140,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_07_green_house_shieldman",
+    "name": "Green House Shieldman",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "rectangular lattice shield and hefty handaxe",
+    "sprite": "sprites/knight/hk_04_07_green_house_shieldman.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      208,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      250,
+      204,
+      124,
+      135
+    ],
+    "sprite_pivot": [
+      23,
+      134
+    ],
+    "sheet_pivot": [
+      273,
+      338
+    ],
+    "native_height_ap": 135,
+    "suggested_world_height_px": 75,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_08_fernridge_striker",
+    "name": "Fernridge Striker",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "spiked morningstar",
+    "sprite": "sprites/knight/hk_04_08_fernridge_striker.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      416,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      444,
+      196,
+      151,
+      143
+    ],
+    "sprite_pivot": [
+      29,
+      142
+    ],
+    "sheet_pivot": [
+      473,
+      338
+    ],
+    "native_height_ap": 143,
+    "suggested_world_height_px": 79,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_09_hunter_of_the_fourth_pen",
+    "name": "Hunter of the Fourth Pen",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "heavy net and cleaver",
+    "sprite": "sprites/knight/hk_04_09_hunter_of_the_fourth_pen.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      624,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      661,
+      207,
+      134,
+      132
+    ],
+    "sprite_pivot": [
+      55,
+      131
+    ],
+    "sheet_pivot": [
+      716,
+      338
+    ],
+    "native_height_ap": 132,
+    "suggested_world_height_px": 73,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_04_10_speakthorn_paladin",
+    "name": "Speakthorn Paladin",
+    "kind": "knight",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest green, oxidized bronze, charcoal plate",
+    "weapon_brief": "splitting falx",
+    "sprite": "sprites/knight/hk_04_10_speakthorn_paladin.png",
+    "sheet": "sheets/knight/04_conservatory_and_menagerie.png",
+    "cell": [
+      832,
+      176,
+      208,
+      176
+    ],
+    "art_rect": [
+      854,
+      198,
+      163,
+      141
+    ],
+    "sprite_pivot": [
+      24,
+      140
+    ],
+    "sheet_pivot": [
+      878,
+      338
+    ],
+    "native_height_ap": 141,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_01_ossuary_bell_knight",
+    "name": "Ossuary Bell Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "barbed cathedral spear",
+    "sprite": "sprites/knight/hk_05_01_ossuary_bell_knight.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      0,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      56,
+      33,
+      111,
+      130
+    ],
+    "sprite_pivot": [
+      35,
+      129
+    ],
+    "sheet_pivot": [
+      91,
+      162
+    ],
+    "native_height_ap": 130,
+    "suggested_world_height_px": 72,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_02_alabaster_bastion_guard",
+    "name": "Alabaster Bastion Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "skull-rim tower shield and hooked axe",
+    "sprite": "sprites/knight/hk_05_02_alabaster_bastion_guard.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      224,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      270,
+      29,
+      132,
+      134
+    ],
+    "sprite_pivot": [
+      55,
+      133
+    ],
+    "sheet_pivot": [
+      325,
+      162
+    ],
+    "native_height_ap": 134,
+    "suggested_world_height_px": 74,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_03_reliquary_ashguard",
+    "name": "Reliquary Ashguard",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "hammer on a hooked long shaft",
+    "sprite": "sprites/knight/hk_05_03_reliquary_ashguard.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      448,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      480,
+      19,
+      159,
+      144
+    ],
+    "sprite_pivot": [
+      40,
+      143
+    ],
+    "sheet_pivot": [
+      520,
+      162
+    ],
+    "native_height_ap": 144,
+    "suggested_world_height_px": 80,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_04_milkplate_vindicator",
+    "name": "Milkplate Vindicator",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "broad bronze two-handed cleaver",
+    "sprite": "sprites/knight/hk_05_04_milkplate_vindicator.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      672,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      710,
+      26,
+      148,
+      137
+    ],
+    "sprite_pivot": [
+      31,
+      136
+    ],
+    "sheet_pivot": [
+      741,
+      162
+    ],
+    "native_height_ap": 137,
+    "suggested_world_height_px": 76,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_05_limestone_chalice_knight",
+    "name": "Limestone Chalice Knight",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "triple head flail",
+    "sprite": "sprites/knight/hk_05_05_limestone_chalice_knight.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      896,
+      0,
+      224,
+      176
+    ],
+    "art_rect": [
+      923,
+      25,
+      170,
+      138
+    ],
+    "sprite_pivot": [
+      28,
+      137
+    ],
+    "sheet_pivot": [
+      951,
+      162
+    ],
+    "native_height_ap": 138,
+    "suggested_world_height_px": 77,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_06_the_ivory_shield_biter",
+    "name": "The Ivory Shield-Biter",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "crescent shield with central spike",
+    "sprite": "sprites/knight/hk_05_06_the_ivory_shield_biter.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      0,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      37,
+      199,
+      150,
+      140
+    ],
+    "sprite_pivot": [
+      43,
+      139
+    ],
+    "sheet_pivot": [
+      80,
+      338
+    ],
+    "native_height_ap": 140,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_07_crypt_lace_guard",
+    "name": "Crypt Lace Guard",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "spiked round mace",
+    "sprite": "sprites/knight/hk_05_07_crypt_lace_guard.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      224,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      274,
+      204,
+      124,
+      135
+    ],
+    "sprite_pivot": [
+      24,
+      134
+    ],
+    "sheet_pivot": [
+      298,
+      338
+    ],
+    "native_height_ap": 135,
+    "suggested_world_height_px": 75,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_08_bonecomb_duelist",
+    "name": "Bonecomb Duelist",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "bone-hilt execution sword",
+    "sprite": "sprites/knight/hk_05_08_bonecomb_duelist.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      448,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      469,
+      196,
+      181,
+      143
+    ],
+    "sprite_pivot": [
+      28,
+      142
+    ],
+    "sheet_pivot": [
+      497,
+      338
+    ],
+    "native_height_ap": 143,
+    "suggested_world_height_px": 79,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_09_arched_helm_totenguard",
+    "name": "Arched Helm Totenguard",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "bow-like giant arbalest",
+    "sprite": "sprites/knight/hk_05_09_arched_helm_totenguard.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      672,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      698,
+      207,
+      171,
+      132
+    ],
+    "sprite_pivot": [
+      31,
+      131
+    ],
+    "sheet_pivot": [
+      729,
+      338
+    ],
+    "native_height_ap": 132,
+    "suggested_world_height_px": 73,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_05_10_the_last_chapel_pike",
+    "name": "The Last Chapel Pike",
+    "kind": "knight",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white plate and dark iron, muted red cloth, restrained skull motifs",
+    "weapon_brief": "enormous barbed pike",
+    "sprite": "sprites/knight/hk_05_10_the_last_chapel_pike.png",
+    "sheet": "sheets/knight/05_sanctuaries_and_ossuary.png",
+    "cell": [
+      896,
+      176,
+      224,
+      176
+    ],
+    "art_rect": [
+      920,
+      198,
+      175,
+      141
+    ],
+    "sprite_pivot": [
+      22,
+      140
+    ],
+    "sheet_pivot": [
+      942,
+      338
+    ],
+    "native_height_ap": 141,
+    "suggested_world_height_px": 78,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "hk_06_01_margrave_of_the_crimson_gate",
+    "name": "Margrave of the Crimson Gate",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "huge iron jaws on a polearm",
+    "sprite": "sprites/boss/hk_06_01_margrave_of_the_crimson_gate.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      0,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      26,
+      55,
+      316,
+      252
+    ],
+    "sprite_pivot": [
+      68,
+      251
+    ],
+    "sheet_pivot": [
+      94,
+      306
+    ],
+    "native_height_ap": 252,
+    "suggested_world_height_px": 140,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_02_the_black_clapper_count",
+    "name": "The Black-Clapper Count",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "giant swinging two-handed flail",
+    "sprite": "sprites/boss/hk_06_02_the_black_clapper_count.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      368,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      400,
+      42,
+      303,
+      265
+    ],
+    "sprite_pivot": [
+      61,
+      264
+    ],
+    "sheet_pivot": [
+      461,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_03_verrask_the_red_drawbridge",
+    "name": "Verrask the Red Drawbridge",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "giant pavise with arch and floorward mace",
+    "sprite": "sprites/boss/hk_06_03_verrask_the_red_drawbridge.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      736,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      792,
+      45,
+      255,
+      262
+    ],
+    "sprite_pivot": [
+      78,
+      261
+    ],
+    "sheet_pivot": [
+      870,
+      306
+    ],
+    "native_height_ap": 262,
+    "suggested_world_height_px": 146,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_04_tallowsteel_executioner",
+    "name": "Tallowsteel Executioner",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "two-handed chopping greatsword",
+    "sprite": "sprites/boss/hk_06_04_tallowsteel_executioner.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      1104,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      1129,
+      19,
+      317,
+      288
+    ],
+    "sprite_pivot": [
+      153,
+      287
+    ],
+    "sheet_pivot": [
+      1282,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_05_the_blood_rampart_regent",
+    "name": "The Blood Rampart Regent",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "twin heavy curved cleavers",
+    "sprite": "sprites/boss/hk_06_05_the_blood_rampart_regent.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      1472,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      1512,
+      47,
+      288,
+      260
+    ],
+    "sprite_pivot": [
+      91,
+      259
+    ],
+    "sheet_pivot": [
+      1603,
+      306
+    ],
+    "native_height_ap": 260,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_06_sir_auvrant_of_the_first_breach",
+    "name": "Sir Auvrant of the First Breach",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "oversized boar lance and enormous gauntlet",
+    "sprite": "sprites/boss/hk_06_06_sir_auvrant_of_the_first_breach.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      0,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      16,
+      358,
+      336,
+      269
+    ],
+    "sprite_pivot": [
+      61,
+      268
+    ],
+    "sheet_pivot": [
+      77,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_07_lord_berram_of_the_crimson_grate",
+    "name": "Lord Berram of the Crimson Grate",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "weighty trident",
+    "sprite": "sprites/boss/hk_06_07_lord_berram_of_the_crimson_grate.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      368,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      383,
+      344,
+      337,
+      283
+    ],
+    "sprite_pivot": [
+      74,
+      282
+    ],
+    "sheet_pivot": [
+      457,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_08_the_red_helmed_ram",
+    "name": "The Red-Helmed Ram",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "battering-ram mace",
+    "sprite": "sprites/boss/hk_06_08_the_red_helmed_ram.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      736,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      771,
+      373,
+      297,
+      254
+    ],
+    "sprite_pivot": [
+      50,
+      253
+    ],
+    "sheet_pivot": [
+      821,
+      626
+    ],
+    "native_height_ap": 254,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_09_oathburner_marshal_sevret",
+    "name": "Oathburner Marshal Sevret",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "torch-shaped iron warclub with contained ember",
+    "sprite": "sprites/boss/hk_06_09_oathburner_marshal_sevret.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      1104,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      1122,
+      350,
+      332,
+      277
+    ],
+    "sprite_pivot": [
+      77,
+      276
+    ],
+    "sheet_pivot": [
+      1199,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_06_10_the_blood_mantle_besieger",
+    "name": "The Blood Mantle Besieger",
+    "kind": "boss",
+    "suggested_castle_wing": "Lower Ward",
+    "livery": "blood-red plate and lacquer with soot-black rivets",
+    "weapon_brief": "enormous spiked arbalest",
+    "sprite": "sprites/boss/hk_06_10_the_blood_mantle_besieger.png",
+    "sheet": "sheets/boss/06_crimson_castle_bosses.png",
+    "cell": [
+      1472,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      1492,
+      368,
+      327,
+      259
+    ],
+    "sprite_pivot": [
+      68,
+      258
+    ],
+    "sheet_pivot": [
+      1560,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_01_master_of_the_fallen_anvil",
+    "name": "Master of the Fallen Anvil",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "one immense slab-sided smith hammer",
+    "sprite": "sprites/boss/hk_07_01_master_of_the_fallen_anvil.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      0,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      37,
+      55,
+      261,
+      252
+    ],
+    "sprite_pivot": [
+      92,
+      251
+    ],
+    "sheet_pivot": [
+      129,
+      306
+    ],
+    "native_height_ap": 252,
+    "suggested_world_height_px": 140,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_02_karrest_the_ash_gilded",
+    "name": "Karrest the Ash-Gilded",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "hooked glaive with asymmetric shoulder guard",
+    "sprite": "sprites/boss/hk_07_02_karrest_the_ash_gilded.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      336,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      361,
+      42,
+      285,
+      265
+    ],
+    "sprite_pivot": [
+      79,
+      264
+    ],
+    "sheet_pivot": [
+      440,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_03_the_bellfoundry_baron",
+    "name": "The Bellfoundry Baron",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "two-handed heavy bell-ended maul",
+    "sprite": "sprites/boss/hk_07_03_the_bellfoundry_baron.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      672,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      699,
+      45,
+      281,
+      262
+    ],
+    "sprite_pivot": [
+      100,
+      261
+    ],
+    "sheet_pivot": [
+      799,
+      306
+    ],
+    "native_height_ap": 262,
+    "suggested_world_height_px": 146,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_04_veygor_of_the_hammer_hall",
+    "name": "Veygor of the Hammer Hall",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "paired square-headed warhammers",
+    "sprite": "sprites/boss/hk_07_04_veygor_of_the_hammer_hall.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      1008,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1034,
+      19,
+      283,
+      288
+    ],
+    "sprite_pivot": [
+      76,
+      287
+    ],
+    "sheet_pivot": [
+      1110,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_05_countess_orren_at_the_diepress",
+    "name": "Countess Orren at the Diepress",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "massive hinged sheet-metal poleaxe",
+    "sprite": "sprites/boss/hk_07_05_countess_orren_at_the_diepress.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      1344,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1377,
+      47,
+      269,
+      260
+    ],
+    "sprite_pivot": [
+      99,
+      259
+    ],
+    "sheet_pivot": [
+      1476,
+      306
+    ],
+    "native_height_ap": 260,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_06_the_broken_kiln_constable",
+    "name": "The Broken Kiln Constable",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "cast iron crescent guillotine blade",
+    "sprite": "sprites/boss/hk_07_06_the_broken_kiln_constable.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      0,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      29,
+      358,
+      278,
+      269
+    ],
+    "sprite_pivot": [
+      114,
+      268
+    ],
+    "sheet_pivot": [
+      143,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_07_the_gilt_manacle_lord",
+    "name": "The Gilt Manacle Lord",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "iron chain weapon anchored in a clasped hand",
+    "sprite": "sprites/boss/hk_07_07_the_gilt_manacle_lord.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      336,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      370,
+      344,
+      268,
+      283
+    ],
+    "sprite_pivot": [
+      111,
+      282
+    ],
+    "sheet_pivot": [
+      481,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_08_ser_thennar_the_coal_wall",
+    "name": "Ser Thennar the Coal Wall",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "colossal grey shield and short gold spear",
+    "sprite": "sprites/boss/hk_07_08_ser_thennar_the_coal_wall.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      672,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      707,
+      373,
+      265,
+      254
+    ],
+    "sprite_pivot": [
+      148,
+      253
+    ],
+    "sheet_pivot": [
+      855,
+      626
+    ],
+    "native_height_ap": 254,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_09_the_seven_rivet_marshal",
+    "name": "The Seven Rivet Marshal",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "giant forked lance",
+    "sprite": "sprites/boss/hk_07_09_the_seven_rivet_marshal.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      1008,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1026,
+      350,
+      300,
+      277
+    ],
+    "sprite_pivot": [
+      97,
+      276
+    ],
+    "sheet_pivot": [
+      1123,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_07_10_the_anvil_mask_regent",
+    "name": "The Anvil Mask Regent",
+    "kind": "boss",
+    "suggested_castle_wing": "Armoury and Forge",
+    "livery": "charcoal-grey steel, old gold fittings, no blue",
+    "weapon_brief": "giant bronze-lined execution sword",
+    "sprite": "sprites/boss/hk_07_10_the_anvil_mask_regent.png",
+    "sheet": "sheets/boss/07_forge_castle_bosses.png",
+    "cell": [
+      1344,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1361,
+      368,
+      301,
+      259
+    ],
+    "sprite_pivot": [
+      97,
+      258
+    ],
+    "sheet_pivot": [
+      1458,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_01_the_cobalt_shelfbreaker",
+    "name": "The Cobalt Shelfbreaker",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "immense two-handed ramheaded club",
+    "sprite": "sprites/boss/hk_08_01_the_cobalt_shelfbreaker.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      0,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      24,
+      55,
+      303,
+      252
+    ],
+    "sprite_pivot": [
+      68,
+      251
+    ],
+    "sheet_pivot": [
+      92,
+      306
+    ],
+    "native_height_ap": 252,
+    "suggested_world_height_px": 140,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_02_lord_tervain_of_the_silver_index",
+    "name": "Lord Tervain of the Silver Index",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "engraved silver scythe halberd",
+    "sprite": "sprites/boss/hk_08_02_lord_tervain_of_the_silver_index.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      352,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      383,
+      42,
+      289,
+      265
+    ],
+    "sprite_pivot": [
+      75,
+      264
+    ],
+    "sheet_pivot": [
+      458,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_03_the_iron_folio_warden",
+    "name": "The Iron Folio Warden",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "giant codex shield and plain thrust sword",
+    "sprite": "sprites/boss/hk_08_03_the_iron_folio_warden.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      704,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      744,
+      45,
+      271,
+      262
+    ],
+    "sprite_pivot": [
+      78,
+      261
+    ],
+    "sheet_pivot": [
+      822,
+      306
+    ],
+    "native_height_ap": 262,
+    "suggested_world_height_px": 146,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_04_the_ninth_archive_castellan",
+    "name": "The Ninth Archive Castellan",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "double headed long axe",
+    "sprite": "sprites/boss/hk_08_04_the_ninth_archive_castellan.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      1056,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      1078,
+      19,
+      307,
+      288
+    ],
+    "sprite_pivot": [
+      62,
+      287
+    ],
+    "sheet_pivot": [
+      1140,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_05_marquise_of_the_indigo_margin",
+    "name": "Marquise of the Indigo Margin",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "immense winged spear",
+    "sprite": "sprites/boss/hk_08_05_marquise_of_the_indigo_margin.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      1408,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      1431,
+      47,
+      306,
+      260
+    ],
+    "sprite_pivot": [
+      80,
+      259
+    ],
+    "sheet_pivot": [
+      1511,
+      306
+    ],
+    "native_height_ap": 260,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_06_prince_anveret_of_the_book_vault",
+    "name": "Prince Anveret of the Book Vault",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "serrated silver glaive",
+    "sprite": "sprites/boss/hk_08_06_prince_anveret_of_the_book_vault.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      0,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      17,
+      358,
+      317,
+      269
+    ],
+    "sprite_pivot": [
+      89,
+      268
+    ],
+    "sheet_pivot": [
+      106,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_07_the_royal_atlas_bearer",
+    "name": "The Royal Atlas Bearer",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "huge square hammer in one hand and bound atlas held in other",
+    "sprite": "sprites/boss/hk_08_07_the_royal_atlas_bearer.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      352,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      382,
+      344,
+      291,
+      283
+    ],
+    "sprite_pivot": [
+      77,
+      282
+    ],
+    "sheet_pivot": [
+      459,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_08_the_azure_ledger_marshal",
+    "name": "The Azure Ledger Marshal",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "giant arbalest with folding stand",
+    "sprite": "sprites/boss/hk_08_08_the_azure_ledger_marshal.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      704,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      721,
+      373,
+      318,
+      254
+    ],
+    "sprite_pivot": [
+      141,
+      253
+    ],
+    "sheet_pivot": [
+      862,
+      626
+    ],
+    "native_height_ap": 254,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_09_the_seal_of_the_last_key",
+    "name": "The Seal of the Last Key",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "large gate key polearm",
+    "sprite": "sprites/boss/hk_08_09_the_seal_of_the_last_key.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      1056,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      1077,
+      350,
+      309,
+      277
+    ],
+    "sprite_pivot": [
+      65,
+      276
+    ],
+    "sheet_pivot": [
+      1142,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_08_10_the_blue_oath_reckoner",
+    "name": "The Blue Oath Reckoner",
+    "kind": "boss",
+    "suggested_castle_wing": "Ancient Library",
+    "livery": "royal-blue enamel and dusty silver with shadow-black iron, never gold",
+    "weapon_brief": "enormous two-handed sword and tiered silver legplates",
+    "sprite": "sprites/boss/hk_08_10_the_blue_oath_reckoner.png",
+    "sheet": "sheets/boss/08_library_castle_bosses.png",
+    "cell": [
+      1408,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      1445,
+      368,
+      278,
+      259
+    ],
+    "sprite_pivot": [
+      110,
+      258
+    ],
+    "sheet_pivot": [
+      1555,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_01_the_verdigris_menagerie_duke",
+    "name": "The Verdigris Menagerie Duke",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "enormous two-handed beast hook",
+    "sprite": "sprites/boss/hk_09_01_the_verdigris_menagerie_duke.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      0,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      47,
+      55,
+      257,
+      252
+    ],
+    "sprite_pivot": [
+      43,
+      251
+    ],
+    "sheet_pivot": [
+      90,
+      306
+    ],
+    "native_height_ap": 252,
+    "suggested_world_height_px": 140,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_02_the_fourth_hothouse_custodian",
+    "name": "The Fourth Hothouse Custodian",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "brutal anther-like mace",
+    "sprite": "sprites/boss/hk_09_02_the_fourth_hothouse_custodian.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      352,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      390,
+      42,
+      276,
+      265
+    ],
+    "sprite_pivot": [
+      43,
+      264
+    ],
+    "sheet_pivot": [
+      433,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_03_zerrek_the_ivy_bulwark",
+    "name": "Zerrek the Ivy Bulwark",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "leaf pavise and long flanged hammer",
+    "sprite": "sprites/boss/hk_09_03_zerrek_the_ivy_bulwark.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      704,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      746,
+      45,
+      267,
+      262
+    ],
+    "sprite_pivot": [
+      95,
+      261
+    ],
+    "sheet_pivot": [
+      841,
+      306
+    ],
+    "native_height_ap": 262,
+    "suggested_world_height_px": 146,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_04_lady_varenne_of_the_broken_trellis",
+    "name": "Lady Varenne of the Broken Trellis",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "oversized heavy hooked sword",
+    "sprite": "sprites/boss/hk_09_04_lady_varenne_of_the_broken_trellis.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      1056,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      1071,
+      19,
+      321,
+      288
+    ],
+    "sprite_pivot": [
+      74,
+      287
+    ],
+    "sheet_pivot": [
+      1145,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_05_the_laureled_kennel_marshal",
+    "name": "The Laureled Kennel Marshal",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "triple-pronged monster prod",
+    "sprite": "sprites/boss/hk_09_05_the_laureled_kennel_marshal.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      1408,
+      0,
+      352,
+      320
+    ],
+    "art_rect": [
+      1438,
+      47,
+      292,
+      260
+    ],
+    "sprite_pivot": [
+      53,
+      259
+    ],
+    "sheet_pivot": [
+      1491,
+      306
+    ],
+    "native_height_ap": 260,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_06_lord_thaurik_of_the_iron_fen",
+    "name": "Lord Thaurik of the Iron Fen",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "broad double crescent axe",
+    "sprite": "sprites/boss/hk_09_06_lord_thaurik_of_the_iron_fen.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      0,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      23,
+      358,
+      305,
+      269
+    ],
+    "sprite_pivot": [
+      59,
+      268
+    ],
+    "sheet_pivot": [
+      82,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_07_the_black_fern_castellan",
+    "name": "The Black Fern Castellan",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "huge spear with leaf-shaped blade",
+    "sprite": "sprites/boss/hk_09_07_the_black_fern_castellan.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      352,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      367,
+      344,
+      321,
+      283
+    ],
+    "sprite_pivot": [
+      54,
+      282
+    ],
+    "sheet_pivot": [
+      421,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_08_the_bronzed_briar_baron",
+    "name": "The Bronzed Briar Baron",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "barbed broad-bladed fauchard",
+    "sprite": "sprites/boss/hk_09_08_the_bronzed_briar_baron.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      704,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      730,
+      373,
+      299,
+      254
+    ],
+    "sprite_pivot": [
+      49,
+      253
+    ],
+    "sheet_pivot": [
+      779,
+      626
+    ],
+    "native_height_ap": 254,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_09_the_frosted_glass_huntsman",
+    "name": "The Frosted Glass Huntsman",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "heavy crossbow",
+    "sprite": "sprites/boss/hk_09_09_the_frosted_glass_huntsman.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      1056,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      1073,
+      350,
+      318,
+      277
+    ],
+    "sprite_pivot": [
+      62,
+      276
+    ],
+    "sheet_pivot": [
+      1135,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_09_10_the_conservatory_s_last_iron_root",
+    "name": "The Conservatory's Last Iron Root",
+    "kind": "boss",
+    "suggested_castle_wing": "Conservatory and Menagerie",
+    "livery": "forest-green lacquer and cloth, aged bronze and verdigris over dark iron",
+    "weapon_brief": "colossal ribbed war club",
+    "sprite": "sprites/boss/hk_09_10_the_conservatory_s_last_iron_root.png",
+    "sheet": "sheets/boss/09_conservatory_castle_bosses.png",
+    "cell": [
+      1408,
+      320,
+      352,
+      320
+    ],
+    "art_rect": [
+      1429,
+      368,
+      309,
+      259
+    ],
+    "sprite_pivot": [
+      61,
+      258
+    ],
+    "sheet_pivot": [
+      1490,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_01_the_ivory_portico_champion",
+    "name": "The Ivory Portico Champion",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "massive hooked crypt axe",
+    "sprite": "sprites/boss/hk_10_01_the_ivory_portico_champion.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      0,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      49,
+      55,
+      270,
+      252
+    ],
+    "sprite_pivot": [
+      52,
+      251
+    ],
+    "sheet_pivot": [
+      101,
+      306
+    ],
+    "native_height_ap": 252,
+    "suggested_world_height_px": 140,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_02_baroness_lesthin_of_the_white_aisle",
+    "name": "Baroness Lesthin of the White Aisle",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "ivory-pommeled greatsword",
+    "sprite": "sprites/boss/hk_10_02_baroness_lesthin_of_the_white_aisle.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      368,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      403,
+      42,
+      297,
+      265
+    ],
+    "sprite_pivot": [
+      48,
+      264
+    ],
+    "sheet_pivot": [
+      451,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_03_the_reliquary_door_marshal",
+    "name": "The Reliquary Door Marshal",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "tomb slab shield and pick",
+    "sprite": "sprites/boss/hk_10_03_the_reliquary_door_marshal.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      736,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      786,
+      45,
+      267,
+      262
+    ],
+    "sprite_pivot": [
+      131,
+      261
+    ],
+    "sheet_pivot": [
+      917,
+      306
+    ],
+    "native_height_ap": 262,
+    "suggested_world_height_px": 146,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_04_the_ossuary_gallows_lord",
+    "name": "The Ossuary Gallows Lord",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "hooked halberd with grave tassels",
+    "sprite": "sprites/boss/hk_10_04_the_ossuary_gallows_lord.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      1104,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      1121,
+      19,
+      334,
+      288
+    ],
+    "sprite_pivot": [
+      68,
+      287
+    ],
+    "sheet_pivot": [
+      1189,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_05_the_skull_vault_swordsman",
+    "name": "The Skull-Vault Swordsman",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "two broad execution cleavers",
+    "sprite": "sprites/boss/hk_10_05_the_skull_vault_swordsman.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      1472,
+      0,
+      368,
+      320
+    ],
+    "art_rect": [
+      1504,
+      47,
+      304,
+      260
+    ],
+    "sprite_pivot": [
+      56,
+      259
+    ],
+    "sheet_pivot": [
+      1560,
+      306
+    ],
+    "native_height_ap": 260,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_06_duke_noreth_the_chalk_mantle",
+    "name": "Duke Noreth the Chalk Mantle",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "skeletal bronze greatmace",
+    "sprite": "sprites/boss/hk_10_06_duke_noreth_the_chalk_mantle.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      0,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      34,
+      358,
+      300,
+      269
+    ],
+    "sprite_pivot": [
+      60,
+      268
+    ],
+    "sheet_pivot": [
+      94,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_07_the_chapel_underlord",
+    "name": "The Chapel Underlord",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "iron censer flail held clear of armor",
+    "sprite": "sprites/boss/hk_10_07_the_chapel_underlord.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      368,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      406,
+      344,
+      291,
+      283
+    ],
+    "sprite_pivot": [
+      61,
+      282
+    ],
+    "sheet_pivot": [
+      467,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_08_the_bleached_aegis_regent",
+    "name": "The Bleached Aegis Regent",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "huge arched pavise and sword",
+    "sprite": "sprites/boss/hk_10_08_the_bleached_aegis_regent.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      736,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      794,
+      373,
+      251,
+      254
+    ],
+    "sprite_pivot": [
+      113,
+      253
+    ],
+    "sheet_pivot": [
+      907,
+      626
+    ],
+    "native_height_ap": 254,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_09_the_white_funeral_lancer",
+    "name": "The White Funeral Lancer",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "giant half moon lance",
+    "sprite": "sprites/boss/hk_10_09_the_white_funeral_lancer.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      1104,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      1126,
+      350,
+      323,
+      277
+    ],
+    "sprite_pivot": [
+      78,
+      276
+    ],
+    "sheet_pivot": [
+      1204,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "hk_10_10_the_coffin_brass_tyrant",
+    "name": "The Coffin Brass Tyrant",
+    "kind": "boss",
+    "suggested_castle_wing": "Sanctuaries and Ossuary",
+    "livery": "bone-white enamel and weathered ivory over black plate, restrained skull motifs",
+    "weapon_brief": "oversized funeral axe with carved ivory inlay",
+    "sprite": "sprites/boss/hk_10_10_the_coffin_brass_tyrant.png",
+    "sheet": "sheets/boss/10_ossuary_castle_bosses.png",
+    "cell": [
+      1472,
+      320,
+      368,
+      320
+    ],
+    "art_rect": [
+      1497,
+      368,
+      317,
+      259
+    ],
+    "sprite_pivot": [
+      60,
+      258
+    ],
+    "sheet_pivot": [
+      1557,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  }
+]

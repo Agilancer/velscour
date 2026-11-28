@@ -330,7 +330,7 @@ export function dropLoot(world, m) {
   const boost = (world.raid || m.isRaid || m.isVelscour ? 3 : 1) * (world.relicMul || 1); // BOSS ROOMs triple the Covenant odds (data/relics.js); Heresies raise them
   for (let i = 0; i < items; i++) {
     const ilvl = lvl + (rank === 'boss' ? 2 : rank === 'normal' ? 0 : 1) + randi(-1, 1);
-    const item = maybeRelic(rollItem(ilvl, { mf: st.magicFind + (world.mfAdd || 0), bonus }), boost);
+    const item = maybeRelic(rollItem(ilvl, { mf: st.magicFind + (world.mfAdd || 0), bonus }), boost, world.act3Set);
     add('item', { item, fades: fadeOf(item) });
   }
   // Sigil Stones: rare from the rank and file, common from guardians (Heresies: world.sigilMul)
@@ -349,7 +349,7 @@ export function dropChest(world, chest, depth) {
   const st = G.player ? G.player.st : { magicFind: 0, goldFind: 0 };
   const n = chest.rare ? randi(2, 3) : randi(1, 2);
   const add = (kind, data) => world.addLoot(new GroundItem(chest.x, chest.y + 0.3, kind, data));
-  for (let i = 0; i < n; i++) add('item', { item: maybeRelic(rollItem(depthLevel(depth) + 1, { mf: st.magicFind + (world.mfAdd || 0), bonus: chest.rare ? 1.2 : 0.35 })) });
+  for (let i = 0; i < n; i++) add('item', { item: maybeRelic(rollItem(depthLevel(depth) + 1, { mf: st.magicFind + (world.mfAdd || 0), bonus: chest.rare ? 1.2 : 0.35 }), world.relicMul || 1, world.act3Set) });
   if (chance(chest.rare ? 0.25 : 0.06)) add('item', { item: rollSigil(depth) });
   for (let i = 0; i < randi(2, 4); i++) add('gold', { amount: Math.round((10 + depthLevel(depth) * 4) * goldScale(depthLevel(depth)) * rand(0.6, 1.4) * (1 + st.goldFind / 100)) });
   if (chance(chest.rare ? 0.8 : 0.3)) add('item', { item: rollGem(depthLevel(depth) + 4) });

@@ -41,6 +41,11 @@ export const LAYOUTS = {
   bridges: ['bridges', { n: [12, 16], name: 'Tower Bridges' }],
   outerstair: ['outerstair', { name: 'The Outer Stair' }],
   leaps: ['leaps', { name: 'The Broken Spans' }],
+  // the castle's great rooms (furnished from gfx/phobostex.js, tools/phobosdress.py)
+  sanctuary: ['sanctuary', { name: 'Sanctuary' }],          // a great church: pews either side of the aisle, a pulpit, the altar in its apse; chapels off a cloister walk
+  auditorium: ['auditorium', { name: 'Auditorium' }],       // horseshoes of tiered benches round a stage
+  stadium: ['stadium', { name: 'The Tilt Stadium' }],       // an oval of sand ringed by a parapet and four tiers of stands, the lord's box over it
+  cloister: ['cloister', { name: 'Cloisters' }],            // garths open to the sky, an arcade of columns round each
   spires: ['spires', { name: 'The Broken Spires' }],   // towers in the void, stairs round them, Velscour's crossings (world/castlespires.js)
 };
 export const SHEER_LAYOUTS = new Set(['pits', 'bridges', 'outerstair', 'leaps', 'spires']);
@@ -54,18 +59,26 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
   const W = opts.w || 200, Hh = opts.h || 170;
   const map = new TileMap(W, Hh);
   if (biome.sheer) map.sheer = biome.sheer;
+  map.wallMix = true;   // the castle changes its stone from run to run of wall
   const I = (x, y) => y * W + x, inb = (x, y) => x > 1 && y > 1 && x < W - 2 && y < Hh - 2;
   const set = (x, y, v = 1) => { x |= 0; y |= 0; if (inb(x, y)) map.t[I(x, y)] = v; };
   const rect = (x, y, w, h, v = 1) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) set(xx, yy, v); };
   const stackT = [], shelfRun = (x, y, w, h) => { rect(x, y, w, h, 0); for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) stackT.push([xx, yy, h > w]); };   // the library's stacks (bookcases once walled)
   const disc = (cx, cy, r, v = 1, ry = r) => { for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (((x + 0.5 - cx) / r) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1) set(x, y, v); };
   const ring = (cx, cy, r0, r1, v) => { for (let y = Math.floor(cy - r1); y <= cy + r1; y++) for (let x = Math.floor(cx - r1); x <= cx + r1; x++) { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); if (d >= r0 && d <= r1) set(x, y, v); } };
-  const lineW = (x0, y0, x1, y1, w = 1) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2) + 1; for (let i = 0; i <= n; i++) { const k = i / n, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k; rect(Math.round(x - w / 2), Math.round(y - w / 2), w, w); } };
+  const lineW = (x0, y0, x1, y1, w = 1) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2) + 1; for (let i = 0; i <= n; i++) { const k = i / n, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k; rect(Math.round(x - w / 2), Math.round(y - w / 2), w, w); if (marking) for (let a = 0; a < w; a++) for (let b = 0; b < w; b++) { const X = Math.round(x - w / 2) + a, Y = Math.round(y - w / 2) + b; if (inb(X, Y)) clear[I(X, Y)] = 1; } } };
   const corridor = (a, b, w = 3) => { // an L between two rooms' centres, the bend picked by the seed
+    marking = true;
     if (rng.chance(0.5)) { lineW(a.mx, a.my, b.mx, a.my, w); lineW(b.mx, a.my, b.mx, b.my, w); }
     else { lineW(a.mx, a.my, a.mx, b.my, w); lineW(a.mx, b.my, b.mx, b.my, w); }
+    marking = false;
   };
   const rooms = [], leaps = [], extra = [];
+  // furniture [name, x, y, flip, extra tiles it also fills], columns, floors laid over the wing's own ([x, y, name]; 'carpet' = the wing's livery), tiles kept clear (corridor lines)
+  const furn = [], cols = [], over = [], clear = new Uint8Array(W * Hh);
+  let marking = false;
+  const F = (name, x, y, flip = false, more = null) => furn.push([name, x, y, flip, more]);
+  const carpet = (x, y, w, h, name = 'carpet') => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) over.push([xx, yy, name]); };
   const room = (o) => { const r = { type: 'room', idx: rooms.length, ...o }; r.mx ??= r.x + r.w / 2; r.my ??= r.y + r.h / 2; rooms.push(r); return r; };
   // the sprawl: a meandering chain of room sites across the canvas, west to east, with side branches
   const sites = (n, step) => {
@@ -84,7 +97,7 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
   const pillarsIn = (r, rate, every = 4) => {
     if (!rate) return;
     for (let y = r.y + 2; y < r.y + r.h - 2; y += every) for (let x = r.x + 2; x < r.x + r.w - 2; x += every)
-      if (rng.chance(rate) && Math.abs(x + 1 - r.mx) + Math.abs(y + 1 - r.my) > 3) rect(x, y, 1 + (rate > 0.5 ? 1 : 0), 1 + (rate > 0.5 ? 1 : 0), 0);
+      if (rng.chance(rate) && Math.abs(x + 1 - r.mx) + Math.abs(y + 1 - r.my) > 3) cols.push([x, y]);   // a column (the stone drum of gfx/phobostex.js), not a hollow box of wall
   };
 
   // ------------------------------------------------------------------ the families
@@ -113,7 +126,7 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
       const len = along ? r.w : r.h, span = along ? r.h : r.w;
       for (let k = 4; k < len - 4; k += 4) for (const s of [Math.floor(span * 0.28), Math.ceil(span * 0.72) - 1]) {
         const [px, py] = along ? [r.x + k, r.y + s] : [r.x + s, r.y + k];
-        if (O.pillars === 'rows' || k % 8 === 4) rect(px, py, 2, 2, 0);
+        if (O.pillars === 'rows' || k % 8 === 4) cols.push([px, py]);
       }
       if (O.aisles) for (let k = 6; k < len - 6; k += 10) { // side chapels
         const [cx, cy] = along ? [r.x + k, r.y - 6] : [r.x - 6, r.y + k];
@@ -122,7 +135,19 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
         rect(dx, dy, 6, 6); along ? rect(dx + 2, dy - 1, 2, 1) : rect(dx - 1, dy + 2, 1, 2);
       }
       if (O.apse) disc(along ? r.x + r.w : r.mx, along ? r.my : r.y + r.h, span * 0.45);
-      if (O.table) rect(along ? r.x + 8 : r.mx - 1, along ? r.my - 1 : r.y + 8, along ? r.w - 16 : 2, along ? 2 : r.h - 16, 0);
+      // the long tables down a great hall; pews, a pulpit and the altar in a church's nave
+      if (O.table) { r.bare = true; for (const off of [-3, 3]) for (let k = 9; k < len - 9; k += 4) { const [tx, ty] = along ? [r.x + k, Math.floor(r.my) + off] : [Math.floor(r.mx) + off, r.y + k]; F('hall_table', tx + 0.5, ty + 0.5, !along, [along ? [tx - 1, ty] : [tx, ty - 1]]); }
+        along ? carpet(r.x + 3, Math.floor(r.my) - 1, r.w - 6, 2) : carpet(Math.floor(r.mx) - 1, r.y + 3, 2, r.h - 6); F('lord_box', along ? r.x + r.w - 3.5 : r.mx, along ? r.my : r.y + r.h - 3.5, along); }
+      if (O.aisles) {
+        r.bare = true;
+        const s0 = Math.floor(span * 0.28) + 1, s1 = Math.ceil(span * 0.72) - 2, mid = Math.floor(span / 2);
+        for (let k = 5; k < len - 10; k += 2) for (let q = s0; q <= s1; q++) { if (Math.abs(q - mid) <= 1) continue; const [tx, ty] = along ? [r.x + k, r.y + q] : [r.x + q, r.y + k]; F('pew', tx + 0.5, ty + 0.5, along); }
+        along ? carpet(r.x + 2, r.y + mid - 1, r.w - 2, 3) : carpet(r.x + mid - 1, r.y + 2, 3, r.h - 2);
+        const [ax, ay] = along ? [r.x + r.w - 3, r.y + mid] : [r.x + mid, r.y + r.h - 3];
+        F('altar', ax + 0.5, ay + 0.5, along, along ? [[ax, ay - 1], [ax, ay + 1]] : [[ax - 1, ay], [ax + 1, ay]]);
+        const [qx, qy] = along ? [r.x + r.w - 8, r.y + mid - 3] : [r.x + mid - 3, r.y + r.h - 8]; F('pulpit', qx + 0.5, qy + 0.5, along);
+        for (const o of [-3, 3]) F('candle_stand', (along ? ax : ax + o) + 0.5, (along ? ay + o : ay) + 0.5);
+      }
       if (prev) corridor(prev, r, 4);
       prev = r;
       x = along ? r.x + r.w + 14 : r.x + r.w + 14; y = along ? r.my + rng.int(-20, 20) : clamp(r.my + rng.int(-25, 25), 30, Hh - 30);
@@ -234,6 +259,125 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
     lineW(rooms[0].mx, py, rooms[rooms.length - 1].mx, py, 2);
   }
 
+  if (family === 'sanctuary') {
+    // a narthex, the great church (nave, side chapels, crossing, chancel and apse), a cloister walk to two lesser
+    // chapels, the sacristy beyond. Every church runs west to east: pews face the altar, the aisle carpeted in the
+    // wing's livery, columns down both sides, a pulpit by the crossing
+    const cy = Math.round(Hh / 2 + rng.int(-10, 10));
+    const nar = room({ x: 8, y: cy - 5, w: 10, h: 11, bare: true }); rect(nar.x, nar.y, nar.w, nar.h);
+    for (const dy of [-4, 4]) F('standard', nar.x + 8.5, cy + dy + 0.5);
+    const church = (x0, yc, L, Wd, big) => {
+      const r = room({ x: x0, y: yc - (Wd >> 1), w: L, h: Wd, bare: true, packs: big ? 6 : 2 }); rect(r.x, r.y, L, Wd);
+      const end = r.x + L - (big ? 13 : 7);                                    // where the pews stop: the crossing
+      for (let px = r.x + 4; px < end; px += big ? 3 : 2) for (let py = r.y + 2; py < r.y + Wd - 2; py++) {   // (a great church: room to fight between the rows, a five-wide aisle)
+        if (Math.abs(py - yc) <= (big ? 2 : 1)) continue;
+        if ((py === r.y + 2 || py === r.y + Wd - 3) && (px - r.x) % 6 === 4) cols.push([px, py]); else if (py !== r.y + 2 && py !== r.y + Wd - 3) F('pew', px + 0.5, py + 0.5, true);
+      }
+      carpet(r.x + 1, yc - (big ? 2 : 1), L - 1, big ? 5 : 3);
+      if (big) { carpet(end + 1, r.y + 2, r.x + L - end - 3, Wd - 4); disc(r.x + L, yc + 0.5, Wd * 0.36); carpet(r.x + L, yc - 2, 3, 5); }
+      const ax = r.x + L - (big ? 3 : 2);
+      F('altar', ax + 0.5, yc + 0.5, true, [[ax, yc - 1], [ax, yc + 1]]);
+      for (const o of [-3, 3]) F('candle_stand', ax + 0.5, yc + o + 0.5);
+      F('pulpit', end + 1.5, yc - 3 + 0.5, true); F('lectern', end + 1.5, yc + 3 + 0.5, true);
+      if (big) {
+        F('font', r.x + 2.5, yc + 4.5); for (const o of [-(Wd >> 1) + 1, (Wd >> 1) - 1]) { F('standard', end + 3.5, yc + o + 0.5); F('brazier', r.x + L - 5.5, yc + o * 0.7 + 0.5); }
+        for (let k = 8; k < L - 22; k += 14) for (const s of [-1, 1]) {   // side chapels: an altar, two candles, a tomb
+          const cx0 = r.x + k, cy0 = s < 0 ? r.y - 7 : r.y + Wd + 1;
+          rect(cx0, cy0, 7, 6); rect(cx0 + 2, s < 0 ? r.y - 1 : r.y + Wd, 3, 1);
+          const fy = s < 0 ? cy0 : cy0 + 5;
+          F('sarcophagus', cx0 + 3.5, fy + 0.5, false, [[cx0 + 2, fy]]); F('candle_stand', cx0 + 0.5, fy + 0.5); F('candle_stand', cx0 + 6.5, fy + 0.5);
+          carpet(cx0 + 2, Math.min(cy0, s < 0 ? cy0 : r.y + Wd), 3, 7);
+        }
+      }
+      return r;
+    };
+    const big = church(26, cy, rng.int(58, 66), 17, true);
+    marking = true; lineW(nar.mx, cy, big.x + 2, cy, 3); marking = false;
+    let prev = big;
+    for (const s of rng.chance(0.5) ? [-1, 1] : [1, -1]) {
+      const L = rng.int(24, 30), yc = clamp(cy + s * rng.int(30, 38), 14, Hh - 14), ch = church(Math.min(W - ARENA_W - 34 - L, big.x + big.w + rng.int(-22, 8)), yc, L, 11, false);
+      corridor(prev === big ? { mx: big.x + big.w - 16, my: cy } : prev, { mx: ch.x + 2, my: yc }, 3); prev = ch;
+    }
+    const sac = room({ x: Math.min(W - ARENA_W - 22, big.x + big.w + 14), y: cy - 6, w: 13, h: 13 }); rect(sac.x, sac.y, 13, 13);
+    corridor({ mx: big.x + big.w - 9, my: cy - 6 }, sac, 3); corridor(prev, sac, 3);
+  } else if (family === 'auditorium') {
+    // halls of tiered benches in a horseshoe round a stage (the stage toward the eye, the tiers rising away), lobbies between
+    const S = sites(rng.int(3, 4), 50);
+    let prev = null;
+    for (const [sx, sy] of S) {
+      const r0 = 6, R = r0 + 9, fx = Math.round(clamp(sx, R + 6, W - ARENA_W - R - 22)), fy = Math.round(clamp(sy, R + 6, Hh - R - 6));
+      const r = room({ x: fx - R, y: fy - R, w: R * 2 + 9, h: R * 2, mx: fx + 2, my: fy, bare: true, packs: 5, hall: true });
+      disc(fx, fy, R); rect(fx, fy - 7, 12, 14);
+      for (let y = fy - R; y <= fy + R; y++) for (let x = fx - R; x <= fx + 2; x++) {
+        const d = Math.hypot(x + 0.5 - fx, y + 0.5 - fy), a = Math.atan2(y + 0.5 - fy, x + 0.5 - fx);
+        if (d < r0 || d >= r0 + 8 || Math.abs(a) < 1.25) continue;
+        if ([Math.PI, 2.2, -2.2, 1.45, -1.45].some((q) => Math.abs(Math.atan2(Math.sin(a - q), Math.cos(a - q))) * d < 1.05)) { over.push([x, y, 'carpet']); continue; }   // the aisles up the tiers
+        F('tier' + Math.min(4, 1 + Math.floor((d - r0) / 2)), x + 0.5, y + 0.5, Math.abs(Math.cos(a)) > 0.7);
+      }
+      carpet(fx + 5, fy - 5, 6, 10); F('lectern', fx + 6.5, fy + 0.5, true);
+      for (const o of [-5, 4]) F('standard', fx + 10.5, fy + o + 0.5);
+      for (const o of [-6, 5]) F('brazier', fx + 4.5, fy + o + 0.5);
+      if (prev) corridor({ mx: prev.mx + 6, my: prev.my }, { mx: fx - R + 1, my: fy }, 3);
+      marking = true; lineW(fx - R + 1, fy, fx + 8, fy, 3); marking = false;
+      prev = r;
+    }
+    const lob = room({ x: 5, y: Math.round(rooms[0].my) - 5, w: 9, h: 10 }); rect(lob.x, lob.y, 9, 10); rooms.unshift(rooms.pop()); rooms.forEach((q, i) => (q.idx = i));
+    corridor(lob, { mx: rooms[1].x + 1, my: rooms[1].my }, 3);
+    const last2 = rooms[rooms.length - 1], gr = room({ x: Math.min(W - ARENA_W - 20, Math.round(last2.mx) + 22), y: Math.round(last2.my) - 6, w: 12, h: 12 }); rect(gr.x, gr.y, 12, 12);
+    corridor({ mx: last2.mx + 7, my: last2.my }, gr, 3);
+  } else if (family === 'stadium') {
+    // the gate hall, the great oval (sand, a parapet, four tiers of stands rising away from the eye, the lord's box,
+    // four tunnels through the stands), undercrofts, a lesser pit, the champion's hall
+    const cy = Math.round(Hh / 2 + rng.int(-8, 8));
+    const gate = room({ x: 6, y: cy - 5, w: 10, h: 11 }); rect(gate.x, gate.y, 10, 11);
+    const oval = (cx, yc, a, b, packs) => {
+      const A = a + 9, B = b + 9, r = room({ x: cx - a, y: yc - b, w: a * 2, h: b * 2, mx: cx, my: yc, bare: true, packs, stadium: true });
+      disc(cx, yc, A, 1, B);
+      for (let y = yc - B; y <= yc + B; y++) for (let x = cx - A; x <= cx + A; x++) {
+        const dx = x + 0.5 - cx, dy = y + 0.5 - yc, e = Math.hypot(dx / a, dy / b), rim = Math.hypot(dx / A, dy / B);
+        if (e < 1) { over.push([x, y, 'sand']); continue; }
+        if (rim > 1) continue;
+        if (Math.abs(dx) < 1.6 || Math.abs(dy) < 1.6) { over.push([x, y, 'carpet']); continue; }               // the four tunnels
+        const out = (e - 1) * Math.min(a, b), far = dx + dy < 0;
+        if (out < 1) { F('parapet', x + 0.5, y + 0.5, Math.abs(dx) / a > Math.abs(dy) / b); continue; }
+        if (out < 1.9) continue;                                                                                 // the walk behind the parapet
+        const lv = Math.min(far ? 4 : 2, 1 + Math.floor((out - 1.9) / 1.7));
+        F(far && lv === 2 && Math.abs(dx - dy) < 1.2 ? 'lord_box' : 'tier' + lv, x + 0.5, y + 0.5, Math.abs(dx) / a > Math.abs(dy) / b);
+      }
+      for (let k = 0; k < 10; k++) { const t = (k + 0.5) / 10 * Math.PI * 2; F(k % 2 ? 'standard' : 'brazier', cx + Math.cos(t) * (a - 1.2) + 0.5, yc + Math.sin(t) * (b - 1.2) + 0.5); }
+      marking = true; lineW(cx - A, yc, cx + A, yc, 3); lineW(cx, yc - B, cx, yc + B, 3); marking = false;
+      return r;
+    };
+    const a1 = rng.int(15, 17), b1 = rng.int(11, 13), big = oval(18 + a1 + 12, cy, a1, b1, 7);
+    marking = true; lineW(gate.mx, cy, big.mx - a1 - 9, cy, 3); marking = false;
+    const under = [];
+    for (const s of [-1, 1]) { const w = rng.int(10, 14), h = rng.int(8, 10), yy = s < 0 ? Math.max(4, cy - b1 - 12 - h - 8) : Math.min(Hh - h - 4, cy + b1 + 12 + 8); const u = room({ x: big.mx - (w >> 1) + rng.int(-8, 8), y: yy, w, h }); rect(u.x, u.y, w, h); pillarsIn(u, 0.3); marking = true; lineW(big.mx, cy + s * (b1 + 8), big.mx, u.my, 3); lineW(big.mx, u.my, u.mx, u.my, 3); marking = false; under.push(u); }
+    const a2 = rng.int(9, 11), b2 = rng.int(7, 8), x2 = Math.min(W - ARENA_W - 40 - a2, big.mx + a1 + 9 + a2 + 16), pit = oval(x2, clamp(cy + rng.int(-14, 14), b2 + 14, Hh - b2 - 14), a2, b2, 4);
+    marking = true; lineW(big.mx + a1 + 8, cy, pit.mx - a2 - 8, cy, 3); lineW(pit.mx - a2 - 10, cy, pit.mx - a2 - 10, pit.my, 3); lineW(pit.mx - a2 - 10, pit.my, pit.mx - a2 - 6, pit.my, 3); marking = false;
+    const ch = room({ x: Math.min(W - ARENA_W - 18, pit.mx + a2 + 14), y: pit.my - 6, w: 12, h: 12 }); rect(ch.x, ch.y, 12, 12);
+    marking = true; lineW(pit.mx + a2 + 8, pit.my, ch.mx, pit.my, 3); marking = false;
+  } else if (family === 'cloister') {
+    // garths open to the sky: dead grass, a font or an obelisk at the middle, an arcade of columns round each, the
+    // walk between the columns and the wall carpeted; cells and chapter rooms off the walks
+    const S = sites(rng.int(5, 6), 36);
+    for (const [sx, sy] of S) {
+      const w = rng.int(16, 22), h = rng.int(14, 18), r = room({ x: Math.round(sx - w / 2), y: Math.round(sy - h / 2), w, h, bare: true, packs: 3 });
+      rect(r.x, r.y, w, h);
+      carpet(r.x + 3, r.y + 3, w - 6, h - 6, 'garth');
+      for (let x = r.x + 2; x < r.x + w - 2; x += 2) { cols.push([x, r.y + 2]); cols.push([x, r.y + h - 3]); }
+      for (let y = r.y + 4; y < r.y + h - 3; y += 2) { cols.push([r.x + 2, y]); cols.push([r.x + w - 3, y]); }
+      for (let x = r.x; x < r.x + w; x++) for (const y of [r.y + 1, r.y + h - 2]) over.push([x, y, 'carpet']);
+      for (let y = r.y; y < r.y + h; y++) for (const x of [r.x + 1, r.x + w - 2]) over.push([x, y, 'carpet']);
+      F(rooms.length % 2 ? 'font' : 'obelisk', Math.floor(r.mx) + 0.5, Math.floor(r.my) + 0.5);
+      for (const [dx, dy] of [[-3, -2], [3, 2]]) F('sarcophagus', Math.floor(r.mx) + dx + 0.5, Math.floor(r.my) + dy + 0.5, dx > 0, [[Math.floor(r.mx) + dx - (dx > 0 ? 0 : 1), Math.floor(r.my) + dy - (dx > 0 ? 1 : 0)]]);
+      for (const [dx, dy] of [[4, 4], [w - 5, 4], [4, h - 5], [w - 5, h - 5]]) F(rng.chance(0.5) ? 'standard' : 'brazier', r.x + dx + 0.5, r.y + dy + 0.5);
+      if (rng.chance(0.7)) { const cw = rng.int(7, 9), cr = room({ x: r.x + rng.int(0, w - cw), y: rng.chance(0.5) ? r.y - cw - 6 : r.y + h + 6, w: cw, h: cw }); if (cr.y > 3 && cr.y + cw < Hh - 3) { rect(cr.x, cr.y, cw, cw); corridor(r, cr, 2); } else rooms.pop(); }
+    }
+    const garths = rooms.filter((r) => r.bare);
+    for (let i = 1; i < garths.length; i++) corridor(garths[i - 1], garths[i], 3);
+    rooms.sort((p, q) => (p === garths[0] ? -1 : q === garths[0] ? 1 : 0)); rooms.forEach((q, i) => (q.idx = i));
+  }
+
   /** Two pads, one each side of a gap, that fling the hero across both ways. */
   function padPair(a, b, kind, oneWay = false) {
     const ang = Math.atan2(b.my - a.my, b.mx - a.mx), ra = (a.rr || Math.min(a.w, a.h) / 2) - 1.5, rb = (b.rr || Math.min(b.w, b.h) / 2) - 1.5;
@@ -270,16 +414,37 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
 
   // ------------------------------------------------------------------ dress, wall, light
   const nextTheme = themeDeck(biome, rng);
-  for (const r of live) if (r !== start && r !== raid && r.w >= 6 && r.h >= 6 && !r.shape) Object.assign(r, nextTheme(false));
+  for (const r of live) if (r !== start && r !== raid && r.w >= 6 && r.h >= 6 && !r.shape && !r.bare) Object.assign(r, nextTheme(false));
   // the stacks stand as bookcases (Bellmourn's book spines, gfx/phobostex.js), not walls, where that art has loaded
   const shelves = [];
   if (phobosProp('bookcase')) for (const [x, y, flip] of stackT) { const i = I(x, y); if (!map.t[i] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => map.t[I(x + a, y + b)])) { map.t[i] = 1; shelves.push([x, y, flip]); } }
   finishMap(map, tileset, rng, null, live.filter((r) => r.type === 'room' && !r.shape), extra);
   for (const [x, y] of shelves) map.block[I(x, y)] = 1;
   const packRooms = live.filter((r) => r !== start && r !== raid && r.w * r.h >= 30);
-  const props = map.sheer ? [] : placeObstacles(map, packRooms.filter((r) => !r.shape), tileset, rng, start);
+  // (no chapel windows stood free on the floor in rows: the rig packs' window props are for walls)
+  const props = map.sheer ? [] : placeObstacles(map, packRooms.filter((r) => !r.shape && !r.bare), { ...tileset, scatter: tileset.scatter.filter((q) => !/window|glass_shards/.test(q.name)) }, rng, start);
+  // the furniture and the columns (gfx/phobostex.js): never on a corridor's line or the start, and never sealing the floor
+  if (!map.sheer) {
+    const k = TW / 160, placed = [], color = opts.color || 'gold';
+    const flood2 = () => { const seen = new Uint8Array(W * Hh), qq = [I(sx, sy)]; seen[qq[0]] = 1; for (let h = 0; h < qq.length; h++) { const j = qq[h]; for (const n of [j + 1, j - 1, j + W, j - W]) if (!seen[n] && map.t[n] && !map.block[n]) { seen[n] = 1; qq.push(n); } } return seen; };
+    const put = (name, x, y, flip, more) => {
+      const nm = name === 'standard' ? 'standard_' + color : name === 'altar' ? 'altar_' + color : name, spr = phobosProp(nm), tiles = [[x | 0, y | 0], ...(more || [])];
+      if (!spr || tiles.some(([a, b]) => !inb(a, b) || !map.t[I(a, b)] || map.block[I(a, b)] || clear[I(a, b)]) || Math.hypot(x - start.mx, y - start.my) < 3) return;
+      const pr = { kind: 'scatter', x, y, spr, k, flip: !!flip, fixed: true }; props.push(pr);
+      for (const [a, b] of tiles) { map.block[I(a, b)] = 1; placed.push([I(a, b), pr]); }
+    };
+    for (const [x, y] of cols) put((x * 5 + y * 3) % 23 === 0 ? 'column_broken' : 'column', x + 0.5, y + 0.5, false);
+    for (const [name, x, y, flip, more] of furn) put(name, x, y, flip, more);
+    // a corridor's line cut off: the furniture goes. A pocket no one can reach (behind the stands): filled in
+    const seen = flood2(); let cut = 0;
+    for (let i = 0; i < clear.length; i++) if (clear[i] && map.t[i] && !map.block[i] && !seen[i]) cut++;
+    if (cut) { for (const [i, pr] of placed) { map.block[i] = 0; const j = props.indexOf(pr); if (j >= 0) props.splice(j, 1); } console.warn('castle floor: furniture cut ' + cut + ' corridor tiles off; cleared'); }
+    else for (let i = 0; i < seen.length; i++) if (map.t[i] && !map.block[i] && !seen[i]) map.block[i] = 1;
+  }
   for (const [x, y, flip] of shelves) props.push({ kind: 'scatter', x: x + 0.5, y: y + 0.5, spr: phobosProp((x * 7 + y * 3) % 9 ? 'bookcase' : 'jar_shelf'), k: TW / 160, flip, fixed: true });
-  const { torches, wallHangings } = map.sheer ? { torches: [], wallHangings: [] } : wallMounts(map, rng, biome, () => 0.3, 0.28, wallHangingCount(biome));
+  const { torches, wallHangings } = map.sheer ? { torches: [], wallHangings: [] } : wallMounts(map, rng, biome, () => 0.3, 0.5, wallHangingCount(biome));
+  // Velscour's V from every wall: most hangings are his banner in the wing's livery, some his black war banner
+  for (const h of wallHangings) { const q = rng.next(); if (q < 0.62) h.vb = opts.color || 'gold'; else if (q < 0.8) h.vb = 'war'; }
 
   // ------------------------------------------------------------------ who lives here
   const looks = opts.looks;
@@ -290,15 +455,15 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
   const spawns = [];
   const pickFoe = () => looks.pickArt(rng);
   const per = family === 'bridges' || family === 'leaps' || family === 'outerstair' ? 1 : family === 'naves' ? 3 : 2;
-  for (const r of packRooms) for (let k = 0; k < per; k++) {
+  for (const r of packRooms) for (let k = 0; k < (r.packs || per); k++) {
     const s = spot(r), a = pickFoe(); if (!s || !a) continue;
     const A = ARCH[a.arch] || ARCH.knight;
-    spawns.push({ x: s[0], y: s[1], arch: a.arch, n: rng.int(A.pack[0], A.pack[1]) + (floor > 50 ? 1 : 0), rank: 'normal', look: { art: a.id, swap: null } });
+    spawns.push({ x: s[0], y: s[1], arch: a.arch, n: rng.int(A.pack[0], A.pack[1]) + (floor > 50 ? 1 : 0), rank: 'normal', look: looks.lookOf(a) });
   }
   const champs = 2 + Math.floor(floor / 20), uniques = 1 + Math.floor(floor / 30);
   for (let k = 0; k < champs + uniques; k++) {
     const r = rng.pick(packRooms.length ? packRooms : [last]), s = spot(r), a = pickFoe(); if (!s || !a) continue;
-    spawns.push({ x: s[0], y: s[1], arch: a.arch, n: rng.int(2, 4), rank: k < champs ? 'champion' : 'unique', champ: k === 0, look: { art: a.id, swap: null } });
+    spawns.push({ x: s[0], y: s[1], arch: a.arch, n: rng.int(2, 4), rank: k < champs ? 'champion' : 'unique', champ: k === 0, look: looks.lookOf(a) });
   }
   const gs = raid ? null : spot(guardRoom);
   const chests = [];
@@ -308,7 +473,7 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
   // the way through for auto-play: start, every pad on the main line, the end
   const route = leaps.filter((L) => !L.back).map((L) => [L.x, L.y]);
   return {
-    map, rooms: live, spawns, props, chests, torches, wallHangings, leaps, route, family, layoutName: O.name,
+    map, rooms: live, spawns, props, chests, torches, wallHangings, leaps, route, family, layoutName: O.name, floorOver: over,
     start: [start.mx, start.my], exit: exitAt, guardian: gs, bossRoom: guardRoom, raid,
   };
 }

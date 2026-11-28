@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chest 3D bake</title>
+<!-- The treasure chest of the Bellmourn 3D game (bm repo, assets/game/items/chest.glb, copied to
+     assets/source/chest3d/): body and lid, the lid hinged open through 72 degrees. tools/chest3d_bake.js renders its
+     opening from the game's iso camera into assets/sprites/chest3d.webp + .json (src/gfx/chest3d.js draws it).
+     Only this tool runs three.js. http://localhost:8123/tools/chest3d.html -->
+<style>html, body { margin: 0; background: #2a2622; color: #dfe; font: 12px monospace; }</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three/three.module.min.js", "three/addons/": "../vendor/three/addons/" } }</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const OPEN_DEG = 72, FRAMES = 8, CELL = 128, SS = 4;
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(CELL * SS, CELL * SS); renderer.setClearColor(0x000000, 0); renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xfff0dd, 0x4a3a30, 3.2));
+const key = new THREE.DirectionalLight(0xffe8c8, 5.5); key.position.set(-2.2, 4, 3); scene.add(key);
+const rim = new THREE.DirectionalLight(0x8090c0, 1.6); rim.position.set(3, 2, -2); scene.add(rim);
+// the game's 2:1 iso camera: 30 degrees down, 45 round; one tile (1 unit) is CELL / 2 px wide on its diagonal... the chest is 0.92 wide
+const R = 0.66, cam = new THREE.OrthographicCamera(-R, R, R * 1.4, -R * 0.6, 0.1, 20);
+const el = Math.atan(0.5 / Math.SQRT1_2 * Math.SQRT1_2) , az = Math.PI / 4;   // sin(el) = 0.5: a ground square draws 2:1
+cam.position.set(Math.sin(az) * Math.cos(Math.asin(0.5)) * 6, 0.5 * 6, Math.cos(az) * Math.cos(Math.asin(0.5)) * 6); cam.lookAt(0, 0.25, 0); void el;
+const gltf = await new GLTFLoader().loadAsync('../assets/source/chest3d/chest.glb');
+const root = gltf.scene; scene.add(root);
+const lid = root.getObjectByName('chest_lid');
+root.rotation.y = -0.35;   // its front turned a little toward the eye
+const shot = (deg) => { lid.rotation.set(-deg * Math.PI / 180, 0, 0); renderer.render(scene, cam); return renderer.domElement; };
+window.CHEST3D = {
+  bake() {
+    const c = document.createElement('canvas'); c.width = CELL * FRAMES; c.height = CELL; const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    for (let i = 0; i < FRAMES; i++) { const k = i / (FRAMES - 1), e = k * k * (3 - 2 * k); g.drawImage(shot(OPEN_DEG * e), 0, 0, CELL * SS, CELL * SS, i * CELL, 0, CELL, CELL); }
+    // the floor point under the chest's middle, in a cell (the pivot the game stands on the tile)
+    const p = new THREE.Vector3(0, 0, 0).project(cam);
+    return { sheet: c.toDataURL('image/png'), meta: { cell: CELL, frames: FRAMES, px: Math.round((p.x * 0.5 + 0.5) * CELL), py: Math.round((1 - (p.y * 0.5 + 0.5)) * CELL) } };
+  },
+};
+shot(40);
+</script>
+</body>
+</html>

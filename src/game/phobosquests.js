@@ -225,7 +225,7 @@ const STEPS = {
     goal: (R, q, s, st, L) => (L.who ? { x: L.who.x, y: L.who.y, reach: 1.6, use: L.who.use } : null),
   },
   choice: {
-    arm() {}, tick(R, q, s, st, L) { if (G.autoplayOn) choose(R, q, 0); },
+    arm() {}, tick(R, q, s, st, L) { if (G.autoplayOn) chooseQuest(R.world, q.id, 0); },
     goal: (R, q) => { const n = R.givers[q.id]; return n ? { x: n.x, y: n.y, reach: 1.6, use: n.use } : null; },
   },
 };

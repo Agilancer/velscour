@@ -19,6 +19,7 @@ import { phobosState, QUESTS, WARDS_TO_OPEN } from './phobos.js';
 import { DISTRICTS, HUBS } from '../data/phobos.js';
 import { PHOBOS_QUESTS } from '../data/phobosquests.js';
 import { grantMarks, spendMark, marksFree } from './marks.js';
+import { COVENANT_BY_ID, makeCovenant } from '../data/relics.js';
 
 export const DEATH_PHRASE = 'DEATH IS THE ONLY WAY OUT, MY KIND SIR.';
 export const FEAR_PHRASE = 'fear phobos'; // any case
@@ -145,6 +146,17 @@ export function grantFearPhobos() {
   const city = new Set([...DISTRICTS.map((d) => d.id), 'pennyless', 'quietwatch', 'ashwardens']);
   S.quests ||= {};
   for (const q of PHOBOS_QUESTS) if (city.has(q.at)) S.quests[q.id] = { ...(S.quests[q.id] || {}), s: 'done', i: 0, n: 0 };
+  // Act III's own arms over the gift's armour: the Seneschal's Black and Gold, all five pieces (the Household set a
+  // hero would have won on the way up: data/relics.js), +10, every socket an Eternal gem
+  for (const P of COVENANT_BY_ID.v_gold.pieces) {
+    const it = makeCovenant(MAX_LEVEL, { pieceId: P.id }), old = c.equip[P.slot];
+    if (!it) continue;
+    it.req = Math.min(it.req || 1, c.level); it.upg = 10; delete it.unid; delete it.sealed;
+    it.sockets = it.maxSockets || it.sockets || 0; it.gems = [];
+    for (let k = 0; k < it.sockets; k++) it.gems.push({ gem: ['ruby', 'diamond', 'bloodstone', 'ruby'][k % 4], tier: MAX_GEM_TIER });
+    if (old && !addToBag(c, old)) { const k = c.stash.findIndex((x) => !x); if (k >= 0) c.stash[k] = old; }
+    c.equip[P.slot] = it;
+  }
   grantMarks(FEAR_MARKS, 'from fear of Phobos');
   for (const [k, n] of Object.entries(FEAR_SPEND)) spendMark(k, Math.min(n, marksFree()));
   G.player.recompute(); G.player.hp = G.player.maxHp; G.player.mana = G.player.maxMana;

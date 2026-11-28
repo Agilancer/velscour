@@ -1,7 +1,8 @@
 // ACT III sprite sizes against the rest of the game: rows of Phobos art (each category: folk, ward foes, castle foes,
 // knights, creatures, ward and castle bosses, Velscour's forms) beside the hero and painted monsters of the older sets,
 // frozen in place on a cleared floor; one shot per row. Usage: node tools/tests/phobos_lineup.js [perRow] [cats,...]
-// (the Dungeon Horrors are the rows horror and horror_boss)
+// (the Dungeon Horrors are the rows horror and horror_boss; the Hulking Castle Knights hk and hk_boss, in the four wing
+// liveries turn about: gold, blue, red, green)
 const {openGame,report}=require('./harness');
 const per=+(process.argv[2]||8);
 (async()=>{
@@ -15,11 +16,11 @@ const per=+(process.argv[2]||8);
       const old=BESTIARY.filter(a=>!a.phobos&&!a.lone&&!a.boss&&!a.seaOfSand&&!a.breach&&!a.air&&!a.depthsEdge);
       const oldB=BESTIARY.filter(a=>a.boss&&!a.phobos&&!a.seaOfSand);
       return cats.map(c=>({c,ids:pickN(PHOBOS_ART.filter(a=>a.cat===c),per).map(a=>a.id),ref:pickN(c.includes('boss')||c==='finale'?oldB:old,3).map(a=>a.id)}));
-    },[per,process.argv[3]||'gray,good,ward,castle,knight,creature,horror,ward_boss,castle_boss,horror_boss,finale']);
+    },[per,process.argv[3]||'gray,good,ward,castle,knight,creature,horror,hk,ward_boss,castle_boss,horror_boss,hk_boss,finale']);
     for(const r of rows){
       const info=await page.evaluate(async(r)=>{
         const {G,game}=window.VELSCOUR;const {BIOME_BY_ID}=await import('/src/data/biomes.js');const {loadBiomeArt}=await import('/src/core/assets.js');
-        const {loadArtFor}=await import('/src/core/enemyart.js');const {makeMonster}=await import('/src/game/monster.js');const {ART_BY_ID}=await import('/src/data/bestiary.js');
+        const {loadArtFor}=await import('/src/core/enemyart.js');const {makeMonster}=await import('/src/game/monster.js');const {LIVERY}=await import('/src/data/phobos.js');const LV=Object.values(LIVERY);const {ART_BY_ID}=await import('/src/data/bestiary.js');
         const b=BIOME_BY_ID.ph_castle;await loadBiomeArt(b);game.buildDungeon(60,b);const w=G.world;
         w.creatures=w.creatures.filter(c=>c===G.player);w.hazards=[];
         await loadArtFor([...r.ids,...r.ref],true);
@@ -31,7 +32,7 @@ const per=+(process.argv[2]||8);
         const rank=(id)=>id;void rank;
         G.player.x=x0+0.5;G.player.y=y0+0.5;
         const sizes=[];
-        all.forEach(([id,rk],i)=>{const a=ART_BY_ID[id];const mm=makeMonster(w,a.arch,b,60,rk,x0+1.6+i*1.5,y0+0.5,0,{art:id,swap:null});mm.awake=false;mm.speed=0;mm.spd=0;mm.sight=0;mm.aggroR=0;w.add(mm);sizes.push([a.name.slice(0,18),a.h,+(mm.scale||1).toFixed(2)]);});
+        all.forEach(([id,rk],i)=>{const a=ART_BY_ID[id];const mm=makeMonster(w,a.arch,b,60,rk,x0+1.6+i*1.5,y0+0.5,0,{art:id,swap:a.hk?LV[i%4].swap:null});mm.awake=false;mm.speed=0;mm.spd=0;mm.sight=0;mm.aggroR=0;w.add(mm);sizes.push([a.name.slice(0,18),a.h,+(mm.scale||1).toFixed(2)]);});
         return {sizes,at:[x0+6,y0]};
       },r);
       if(info.err){errors.push('[LINEUP] '+r.c+' '+info.err);continue;}

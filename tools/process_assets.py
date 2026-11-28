@@ -385,7 +385,7 @@ SINGLE_SCALE = 0.85
 # folders stored taller than SINGLE_MAX_H: the Act III finale forms of Lord Velscour (tools/phobospack.py) tower over the arena
 SINGLE_MAX_H_BY = {"phobos/finale_crimson": 520, "phobos/finale_obsidian": 520, "phobos/finale_cathedral": 520, "phobos/cboss_1": 260, "phobos/cboss_2": 260}
 # sets of native pixel art (one art pixel per image pixel): stored 1:1, never resampled (tools/horrorspack.py)
-NATIVE_SETS = {"dungeon_horrors"}
+NATIVE_SETS = {"dungeon_horrors", "hulking_knights"}
 # Pet sheets (familiars/<kind>[_n].jpg) are painted on a flat dark or white background: stored scale per kind.
 SHEET_SCALE = {"blue": 0.28, "elemental": 0.24, "critters": 0.6, "dragons": 0.3, "wolves": 0.36}
 SHEET_TOL = {"blue": 26}  # keying tolerance; dark-furred wolves and black dragons need a tight one

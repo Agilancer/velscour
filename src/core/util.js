@@ -433,6 +433,7 @@ export function recolor(src, params, sx = 0, sy = 0, sw, sh, sprite = false, kee
   const contrast = params.contrast ?? 1;
   const tint = params.tint;
   const colorize = params.colorize; // [h(0-360), s]
+  const livery = params.livery;     // [h(0-360), sat x, dark?]: a castle wing's livery. The coloured cloth and tinted plate take the hue; dark: blackened plate, the brightest colour gilt
   // colours are looked up on a 6-bit-per-channel table: big atlases hold millions of pixels but few colours
   const lut = new Int32Array(1 << 18).fill(-1);
   for (let i = 0; i < d.length; i += 4) {
@@ -442,6 +443,10 @@ export function recolor(src, params, sx = 0, sy = 0, sw, sh, sprite = false, kee
     if (v < 0) {
       let [h, s, l] = rgbToHsl(d[i], d[i + 1], d[i + 2]);
       if (colorize) { h = colorize[0] / 360; s = colorize[1] * (0.4 + s * 0.6); }
+      if (livery) {
+        if (livery[2]) { if (s > 0.42 && l > 0.2) { h = livery[0] / 360; s = clamp(s * livery[1], 0, 1); l = clamp(l + 0.03, 0, 1); } else { s *= 0.2; l = clamp(l * 0.86 - 0.02, 0, 1); } }   // dark, with gold highlights
+        else if (s > 0.2 && l > 0.07 && !(h > 0.085 && h < 0.17 && s > 0.38 && l > 0.3)) { h = livery[0] / 360; s = clamp(s * livery[1], 0, 1); }   // (the art's own gilt stays gilt)
+      }
       h = (h + hue + 1) % 1;
       s = clamp(s * sat, 0, 1);
       l = clamp((l - 0.5) * contrast + 0.5 + light, 0, 1);
