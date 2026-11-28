@@ -30,6 +30,7 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
 python tools/tests/chatgpt_art.py                  # ChatGPT art kits (and Grim Nocturne pixel-locked imports) round-trip, no browser
+python tools/tests/chatgpt_skill_icons.py          # ChatGPT skill icon kit (docs/CHATGPT_SKILL_ICONS.md): fake sheets -> pack -> import --dry, no browser
 node tools/tests/lancer_shields.js                 # Lancer 3D shield models (built from the turntables), turntable + all-rings shots, in-front/behind QA
 node tools/tests/lancer_banner.js                  # Lancer cloth banner: skin/pole sizes, hangs still, trails in 4 directions, Valor + run shots
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed

@@ -14,6 +14,16 @@ Contents
 
 ---
 
+## November 28, 2026: a ChatGPT kit for the missing skill icons (branch `claude/wizardly-ride-ix1zho`)
+- `docs/art_kits/ChatGPT_Skill_Icon_Kit.zip` (docs/CHATGPT_SKILL_ICONS.md): every skill, talent and ultimate sorted
+  into painted (236 skills, 120 talents: the Paladin, Ranger, Wizard, Necromancer and Monk sheets in
+  `assets/ui/skills/`, plus summon creature portraits) and code-drawn (448 skills, 336 talents, 19 ultimates); a style
+  lock from the painted sheets; 101 batch prompts of nine icons on a 3 x 3 magenta template; a packer ChatGPT runs to
+  return `VELSCOUR_Skill_Icons_Return.zip`; `chatgpt_skill_icons.py import` writes the class sheets the loader already
+  reads. Test: `tools/tests/chatgpt_skill_icons.py`.
+- Still to do when the art comes back: import it, wire `ultimates.png` into `ultimateIcon()`, rebuild the asset
+  manager (its skill icon cards still say no painted icons exist).
+
 ## November 26, 2026: the Snowy Summit loses its gates (branch `fix/closed-gates`)
 
 - The user found the hero stuck pushing at a shut frozen iron gate on the Summit, and asked for the gates to go: they make

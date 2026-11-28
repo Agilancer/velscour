@@ -67,6 +67,10 @@ python tools/tests/chatgpt_art.py                 # round trip: examples (withou
 The geometry (cells, insets, frame names) lives in `tools/chatgpt_art.py` and the kit builder imports it, so the
 templates and the importer always agree.
 
+## Skill icon kit
+`ChatGPT_Skill_Icon_Kit.zip` (skills, talents and class ultimates still drawn in code, 3 x 3 sheets, a style lock
+taken from the painted sheets, and a packer ChatGPT runs) has its own page: [CHATGPT_SKILL_ICONS.md](CHATGPT_SKILL_ICONS.md).
+
 ## Grim Nocturne redesign kit
 `ChatGPT_Style_Redesign_Kit.zip` (built by `tools/chatgpt_style_kit.py` from `docs/art_style/`) is the character
 redesign: the art bible, the master prompt, pose-master / armor / overlay templates for all 16 classes on a
