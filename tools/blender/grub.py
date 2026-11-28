@@ -27,8 +27,9 @@ def radius(s):
     """Body radius at s (0 tail .. 1 neck), without the ring bulges."""
     taper_tail = smooth(-0.02, 0.16, s) ** 0.6
     taper_head = 1 - 0.34 * smooth(0.62, 1.0, s)
-    belly = 0.86 + 0.14 * math.sin(math.pi * min(1, s / 0.75)) ** 1.2
-    return RAD * (0.42 + 0.58 * taper_tail) * taper_head * belly
+    belly = 0.80 + 0.30 * math.sin(math.pi * min(1, s / 0.78)) ** 1.4      # a fat, sagging middle
+    collar = 1 + 0.16 * math.exp(-((s - 0.955) / 0.022) ** 2)               # a wrinkled collar behind the head
+    return RAD * (0.42 + 0.58 * taper_tail) * taper_head * belly * collar
 
 
 def bulge(s):
@@ -62,12 +63,12 @@ def blobs(w, h, n, r0, r1, seed, region=None):
 
 SKINS = {
     #         body      belly     vessel   crease    glow            notes
-    'white':  ((226, 220, 200), (240, 236, 220), (168, 160, 150), (120, 104, 88), (190, 255, 150)),
+    'white':  ((232, 228, 214), (242, 238, 226), (150, 132, 138), (26, 22, 24), (190, 255, 150)),
     'yellow': ((232, 200, 70), (246, 226, 130), (150, 110, 30), (110, 74, 14), (255, 240, 90)),
     'green':  ((150, 172, 74), (196, 208, 120), (74, 96, 40), (50, 66, 24), (150, 255, 60)),
     'orange': ((226, 140, 60), (244, 190, 120), (150, 70, 26), (104, 44, 14), (255, 150, 40)),
     'brown':  ((122, 60, 44), (170, 96, 76), (70, 20, 16), (44, 12, 10), (255, 40, 30)),
-    'pink':   ((232, 160, 170), (246, 204, 204), (170, 84, 110), (128, 60, 80), (255, 120, 220)),
+    'pink':   ((206, 150, 150), (224, 188, 180), (138, 70, 92), (104, 52, 66), (255, 120, 220)),
 }
 
 
@@ -112,7 +113,7 @@ def paint(skin):
         for t0 in (0.5 - hw * 0.55, 0.5 + hw * 0.55):
             d = np.hypot((s - (1 - (k - 0.5) / N)) / (0.26 / N), (th - t0) / (hw * 0.42)); shield = np.maximum(shield, np.clip((1 - d) * 5, 0, 1))
     shield = np.maximum(shield, plate(0.0, 0.62 / N, 0.2))
-    bar = np.clip(1 - np.abs(ring - 0.30) / 0.075, 0, 1) * np.clip((0.115 - np.abs(th - 0.5)) / 0.02, 0, 1) * np.clip((np.abs(th - 0.5) - 0.012) / 0.008, 0, 1) * ((ringi >= 1) & (ringi <= N - 4))
+    bar = np.clip(1 - np.abs(ring - 0.30) / 0.11, 0, 1) * np.clip((0.165 - np.abs(th - 0.5)) / 0.02, 0, 1) * np.clip((np.abs(th - 0.5) - 0.012) / 0.008, 0, 1) * ((ringi >= 1) & (ringi <= N - 4))
     shield = np.maximum(shield, np.clip(bar * 3, 0, 1))
     blk = np.maximum(blk, shield); hgt += shield * 0.9
     # black bristle pits over the back, black crochets on the false legs under the middle rings
@@ -127,6 +128,10 @@ def paint(skin):
     sacs = blobs(W, bh, 46, 14, 30, 11, lambda u, v: (0.3 < v < 0.42 or 0.58 < v < 0.7) and 0.1 < u < 0.86)
     if skin == 'white':
         col *= (1 - 0.10 * sacs)[..., None]; glow = sacs * 0.5
+        v1 = np.abs(noise(W, bh, 4, 61, 5, 5) - 0.5); vein = np.clip(1 - v1 / 0.022, 0, 1) * (0.3 + 0.7 * side)   # blue-violet veins under thin skin
+        col = col * (1 - 0.34 * vein[..., None]) + np.array((120, 110, 150.0))[None, None] * 0.34 * vein[..., None]
+        bl = noise(W, bh, 3, 62, 2, 2) ** 2.6                                                                    # flesh showing through
+        col = col * (1 - 0.30 * bl[..., None]) + np.array((214, 150, 140.0))[None, None] * 0.30 * bl[..., None]
     if skin == 'yellow':   # waxy, banded amber, acid sacs along the flanks
         band = (np.sin(ring * 2 * np.pi - 1.2) * 0.5 + 0.5) * back
         col = col * (1 - 0.35 * band[..., None]) + np.array((176, 110, 20.0))[None, None] * 0.35 * band[..., None]
@@ -163,9 +168,12 @@ def paint(skin):
     # a black mask round the mouth (front of the head: lon ~0.5) and a black seam over the crown
     front = np.exp(-(((lon - 0.5) / 0.16) ** 2 + ((lat - 0.62) / 0.24) ** 2))
     seam = np.exp(-((lon - 0.5) / 0.012) ** 2) * (lat < 0.5)
-    m = np.clip(front * 1.7 - 0.5, 0, 1) + seam * 0.7; m = np.clip(m, 0, 1)
+    m = np.clip(front * 1.7 - 0.5, 0, 1) + seam * 0.7
+    if skin == 'white': m = m + np.clip((0.40 - lat) / 0.05, 0, 1) * np.clip((np.abs(lon - 0.5) - 0.13) / 0.04, 0, 1)   # a black plate over the crown
+    m = np.clip(m, 0, 1)
     hc = hc * (1 - m[..., None]) + black[None, None] * m[..., None]
     C[bh:, :q] = hc; Hh[bh:, :q] = hn * 0.6 + m
+    hc_slime = np.clip(front * 1.5 - 0.9, 0, 1) * (hn > 0.55); C[bh:, :q] = C[bh:, :q] * (1 - 0.5 * hc_slime[..., None]) + np.array((190, 215, 150.0))[None, None] * 0.5 * hc_slime[..., None]
     mouth = np.clip(front * 2.4 - 1.6, 0, 1); G[bh:, :q] = mouth[..., None] * glowc[None, None] / 255 * 0.5
     # eyes: glossy black with a cold highlight; hard parts: black to dark horn at the tips
     ex, ey = np.mgrid[0:hs // 2, 0:hs // 2] / (hs / 2)
@@ -289,7 +297,7 @@ def build_mesh():
         # mandibles: black hooks that close across the mouth
         px, py, pz = sx * hr * 0.42, hy - HL * 0.50, hz - hr * 0.22
         M = Matrix.Translation((px, py, pz)) @ Matrix.Rotation(sx * 0.35, 4, 'Z') @ Matrix.Diagonal((-sx, 1, 1, 1))
-        part(horn(7, 5, 0.36, 0.075, 0.42), 'mand' + ('L' if sx < 0 else 'R'), horn_uv(5, 7), M)
+        part(horn(7, 5, 0.50, 0.095, 0.5), 'mand' + ('L' if sx < 0 else 'R'), horn_uv(5, 7), M)
         # six short black legs under the first three rings
         for k in range(3):
             s = 1 - (k + 0.5) / N; y = L / 2 - s * L; r = radius(s)
@@ -311,6 +319,12 @@ def build_mesh():
             sv = 1 - (k + 0.5) / N; y = L / 2 - sv * L; r = radius(sv) * bulge(sv)
             M = Matrix.Translation((sx * r * 0.70, y, r * 0.30)) @ Matrix.Rotation(sx * 0.55, 4, 'Y') @ Matrix.Rotation(math.pi / 2, 4, 'X')
             part(horn(6, 3, 0.11, 0.05, 0.25), 'seg%d' % (N - 1 - k), horn_uv(3, 6), M)
+    for k in range(1, N - 1):
+        sv = 1 - (k + 0.3) / N; y = L / 2 - sv * L; r = radius(sv) * bulge(sv)
+        for sx in (-1, 1):
+            for (ang, ln) in ((0.38, 0.17), (0.95, 0.13)):
+                M = Matrix.Translation((sx * math.sin(ang) * r * 1.0, y, radius(sv) * 0.9 + math.cos(ang) * r * 0.96)) @ Matrix.Rotation(sx * ang, 4, 'Y') @ Matrix.Rotation(-math.pi / 2 + 0.5, 4, 'X')
+                part(horn(4, 2, ln, 0.014, 0.3), 'seg%d' % (N - 1 - k), horn_uv(2, 4), M)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     me = bpy.data.meshes.new('grub'); bm.to_mesh(me); bm.free()
     ob = bpy.data.objects.new('grub', me); bpy.context.scene.collection.objects.link(ob)
@@ -401,11 +415,11 @@ def wave(P, t, T, amp, k=1.4, lat=0.0, hump=0.0):
 
 
 def c_idle(t, T):
-    P = base(); breathe(P, t, T / 2, 0.04)
+    P = base(); breathe(P, t, T / 2, 0.07); wave(P, t, T / 2, 0.05, 1.2)
     sw = math.sin(TAU * t / T)
-    for i in range(7, N): P['by'][i] += 0.05 * sw
-    rear(P, 0.10 + 0.05 * math.sin(TAU * t / T * 2), 8, 11)
-    P['head'] = (-0.10 + 0.06 * math.sin(TAU * t / T * 2 + 1), 0.16 * sw)
+    for i in range(6, N): P['by'][i] += 0.10 * sw
+    rear(P, 0.16 + 0.10 * math.sin(TAU * t / T * 2), 8, 11)
+    P['head'] = (-0.10 + 0.10 * math.sin(TAU * t / T * 2 + 1), 0.30 * sw)
     P['jaw'] = 0.18 + 0.16 * max(0, math.sin(TAU * t / T * 3)) ** 3
     return P
 def c_slither(t, T):
@@ -453,8 +467,9 @@ def gulp(P, u, a, b, amp=0.30):
 def c_spit(t, T):  # release at 0.5
     u = t / T; P = base(); P['anchor'] = 'tail'
     up = env(u, 0.0, 0.3, 0.62, 0.95); jerk = env(u, 0.44, 0.5, 0.54, 0.7)
-    rear(P, 0.75 * up, 6, 10); gulp(P, u, 0.08, 0.5)
-    for i in range(8, N): P['e'][i] *= 1 + 0.18 * jerk
+    rear(P, 1.0 * up, 5, 10); gulp(P, u, 0.08, 0.5, 0.42)
+    for i in range(7, N): P['e'][i] *= 1 + 0.30 * jerk
+    for i in range(0, 5): P['g'][i] *= 1 + 0.12 * up
     P['head'] = (-0.62 * up + 0.5 * jerk, 0); P['jaw'] = 0.15 + 0.85 * env(u, 0.36, 0.48, 0.58, 0.75)
     return P
 def c_barrage(t, T):  # releases at 0.3, 0.5, 0.7
@@ -463,8 +478,8 @@ def c_barrage(t, T):  # releases at 0.3, 0.5, 0.7
     k = 0
     for r in (0.3, 0.5, 0.7):
         j = env(u, r - 0.09, r, r + 0.02, r + 0.09); k = max(k, j); gulp(P, u, r - 0.16, r, 0.2)
-    for i in range(8, N): P['e'][i] *= 1 + 0.16 * k
-    P['head'] = (-0.8 * up + 0.42 * k, 0.22 * math.sin(u * TAU * 2.5) * up); P['jaw'] = 0.25 + 0.75 * k
+    for i in range(7, N): P['e'][i] *= 1 + 0.28 * k
+    P['head'] = (-0.8 * up + 0.6 * k, 0.22 * math.sin(u * TAU * 2.5) * up); P['jaw'] = 0.25 + 0.75 * k
     return P
 def c_lob(t, T):  # release at 0.55
     u = t / T; P = base(); P['anchor'] = 'tail'
@@ -501,8 +516,8 @@ def c_ward(t, T):  # release at 0.6
     return P
 def c_hit(t, T):
     u = t / T; P = base(); k = env(u, 0.0, 0.2, 0.3, 1.0)
-    for i in range(N): P['g'][i] *= 1 + 0.10 * k * math.sin(i * 1.3); P['e'][i] *= 1 - 0.08 * k
-    rear(P, 0.3 * k, 7, 10); P['head'] = (-0.4 * k, 0.3 * k); P['jaw'] = 0.8 * k
+    for i in range(N): P['g'][i] *= 1 + 0.18 * k * math.sin(i * 1.3); P['e'][i] *= 1 - 0.16 * k; P['by'][i] += 0.10 * k * math.sin(i * 2.1)
+    rear(P, 0.7 * k, 6, 10); P['head'] = (-0.6 * k, 0.5 * k); P['jaw'] = 0.8 * k
     return P
 def c_death(t, T):
     u = t / T; P = base(); w = env(u, 0.0, 0.1, 0.5, 0.7); d = ease(min(1, u / 0.85))
@@ -559,7 +574,7 @@ def main():
     nt.links.new(tex(bimage('grub_col', col), -600).outputs[0], bsdf.inputs['Base Color'])
     nm = nt.nodes.new('ShaderNodeNormalMap'); nt.links.new(tex(bimage('grub_nrm', normal_map(hgt), 'Non-Color'), -900).outputs[0], nm.inputs['Color']); nt.links.new(nm.outputs[0], bsdf.inputs['Normal'])
     nt.links.new(tex(bimage('grub_glow', glow), -1200).outputs[0], bsdf.inputs['Emission Color']); bsdf.inputs['Emission Strength'].default_value = 1.0
-    bsdf.inputs['Roughness'].default_value = 0.34; bsdf.inputs['Metallic'].default_value = 0.0
+    bsdf.inputs['Roughness'].default_value = 0.2; bsdf.inputs['Metallic'].default_value = 0.0
     ob.data.materials.append(mat)
     animate(arm)
     arm['rad'] = 1.75

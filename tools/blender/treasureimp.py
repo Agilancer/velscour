@@ -30,7 +30,7 @@ def lin(h, k=1.0): return tuple(float(to_lin(int(h[i:i + 2], 16) / 255)) * k for
 
 
 def gild(img):
-    """The goblin's olive skin -> gilded gold-green (bronze-green shadows, bright gold lights); its rags a touch lighter."""
+    """The goblin's olive skin -> a sickly saturated teal-green (so he reads apart from his tan sack and the ground); its rags a touch lighter."""
     n = img.size[0]
     a = np.empty(n * n * 4, np.float32); img.pixels.foreach_get(a); a = a.reshape(n, n, 4)
     s = to_srgb(a[..., :3])
@@ -42,7 +42,7 @@ def gild(img):
     skin = sm(40, 52, hue) * (1 - sm(100, 115, hue)) * sm(0.16, 0.3, sat) * sm(0.12, 0.25, mx)
     lum = s @ np.array([0.3, 0.55, 0.15], np.float32)
     t = np.clip((lum - 0.12) / 0.5, 0, 1) ** 0.85
-    st = [np.array(c, np.float32) for c in ((0.1, 0.15, 0.03), (0.46, 0.44, 0.07), (0.7, 0.6, 0.2))]
+    st = [np.array(c, np.float32) for c in ((0.02, 0.17, 0.15), (0.08, 0.62, 0.42), (0.5, 0.95, 0.62))]
     tt = t[..., None]
     gold = np.where(tt < 0.5, st[0] + (st[1] - st[0]) * tt * 2, st[1] + (st[2] - st[1]) * (tt * 2 - 1))
     rags = np.clip(s * 1.25 + 0.02, 0, 1)
@@ -229,7 +229,7 @@ def main():
     for inp in ('Metallic', 'Roughness', 'Normal'):
         for l in list(bsdf.inputs[inp].links): nt.links.remove(l)
     bsdf.inputs['Metallic'].default_value = 0; bsdf.inputs['Roughness'].default_value = 0.75
-    bsdf.inputs['Emission Color'].default_value = (*lin('#6a4a08'), 1); bsdf.inputs['Emission Strength'].default_value = 0.08   # a faint gilt glow
+    bsdf.inputs['Emission Color'].default_value = (*lin('#0a6a48'), 1); bsdf.inputs['Emission Strength'].default_value = 0.25   # a faint gilt glow
     gild(base)
     # bones for the hoard
     inv = arm.matrix_world.inverted()
@@ -242,9 +242,9 @@ def main():
     bone('lantern', 'sack_top', lp, lp + V((0, 0, -0.11)))
     bone('keys', 'mixamorig:Hips', (0.165, -0.075, 0.505), (0.165, -0.075, 0.38))
     bpy.ops.object.mode_set(mode='OBJECT')
-    mats = dict(sack=material('sack', (1, 1, 1), 0.9, tex=sack_texture()), gold=material('gold', lin('#e8a018'), 0.3, lin('#a05a04'), 0.5),
+    mats = dict(sack=material('sack', (1, 1, 1), 0.9, tex=sack_texture()), gold=material('gold', lin('#e8a018'), 0.3, lin('#d08a08'), 1.6),
                 ruby=material('ruby', lin('#e01830'), 0.2, lin('#ff1030'), 0.6), emerald=material('emerald', lin('#20d890'), 0.2, lin('#10e8a0'), 0.5),
-                iron=material('iron', lin('#3a2a20'), 0.7), eye=material('eye', lin('#ffe040'), 0.3, lin('#ffe030'), 3.0))
+                iron=material('iron', lin('#3a2a20'), 0.7), eye=material('eye', lin('#ffe040'), 0.3, lin('#ffe030'), 4.0))
     B = Build(); hoard(B); eyes(B, body, arm)
     loot = B.object('hoard', arm, mats)
     body.name = 'body'

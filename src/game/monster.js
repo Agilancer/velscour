@@ -1,5 +1,5 @@
 // Monsters and minions: one AI for both teams.
-import { grubUpdate, attachGrub, grubDef, grubToReplace } from './carriongrubs.js';
+import { grubUpdate, attachGrub, grubDef, grubToReplace, rouseBrood } from './carriongrubs.js';
 import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, pick, randi, shuffle } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -1541,7 +1541,7 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   const w = p.world;
   let key = sk.m.sum, def;
   if (SUMMONS[key] && SUMMONS[key].court) [key, def] = courtDef(key, p); // the Slime Lord's rainbow broods
-  else if (SUMMONS[key] && SUMMONS[key].grubs) [key, def] = grubDef(p); // the Carrion Witch's grubs: one of each colour, the rest white
+  else if (SUMMONS[key] && SUMMONS[key].grubs) { [key, def] = grubDef(p); if (!def) { rouseBrood(p); return null; } } // the Carrion Witch's grubs: one of each colour, the rest white; a full brood is roused, never thinned
   else { if (SUMMONS[key] && SUMMONS[key].pool) key = pick(SUMMONS[key].pool); def = SUMMONS[key]; } // Grave Warband, Conclave of Bones
   if (!def) return null;
   const morph = p && p.isPlayer ? skillMorphFor(p, sk) : null;

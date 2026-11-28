@@ -25,20 +25,20 @@ R = lambda *c: [h(x) for x in c]  # a ramp: shadow, mid, light
 
 # name: source mesh, clips, ramps per region (body, back, under, wing, head), glow colours (deep, hot), glow gains per region
 LOOKS = {
-    'elder': dict(src='dragon_red', out='dragon', clips=FLY + ['hover_breath_in', 'hover_breath_out', 'roar'], gamma=1.05,
-                  body=R('#1c0306', '#96120e', '#ff6a3a'), back=R('#060203', '#2a070a', '#8a2018'), under=R('#4a0c06', '#e86a14', '#ffe690'),
-                  wing=R('#22030a', '#b01812', '#ff7038'), head=R('#200406', '#a81a12', '#ffa060'), keep=0.25,
-                  glow=('#ff3806', '#ffe070'), g=dict(under=1.5, wing=0.55, head=0.5, body=0.12), eye='#ffe860',
-                  skins=dict(whelp=dict(gamma=0.62, body=R('#7a1c04', '#ff7a14', '#ffe27a'), back=R('#5a0a04', '#e8400c', '#ffb040'), under=R('#a04a08', '#ffc23a', '#fff6c0'),
-                                        wing=R('#8a1404', '#ff5a10', '#ffd060'), head=R('#7a1c04', '#ff8a1c', '#fff0a0'), keep=0.1))),
+    'elder': dict(src='dragon_red', out='dragon', clips=FLY + ['hover_breath_in', 'hover_breath_out', 'roar'], gamma=1.0,
+                  body=R('#16020a', '#7a0c0c', '#e8482a'), back=R('#040102', '#1c0507', '#5a1410'), under=R('#6a1c04', '#f08a1c', '#fff0a0'),
+                  wing=R('#3a0508', '#d82c14', '#ff9a4a'), head=R('#3a0808', '#d04424', '#ffe6b8'), keep=0.15,
+                  glow=('#ff3806', '#ffe070'), g=dict(under=1.5, wing=0.55, head=0.5, body=0.12), eye='#fff27a',
+                  skins=dict(whelp=dict(gamma=0.8, body=R('#5a1404', '#e8600c', '#ffc050'), back=R('#1c0502', '#7a1806', '#d8501a'), under=R('#b05a0c', '#ffd24a', '#fffad0'),
+                                        wing=R('#3a0604', '#b02808', '#ff7a28'), head=R('#7a2404', '#ffa030', '#fff4b0'), keep=0.05))),
     'wyvern': dict(src='dragon_green', out='dragon_wyvern', clips=FLY, gamma=0.9,
-                   body=R('#2a1204', '#b86a1c', '#ffd27a'), back=R('#140602', '#5a240a', '#c07a30'), under=R('#4a2a10', '#e0b060', '#fff0c0'),
-                   wing=R('#4a1002', '#f06a10', '#ffc050'), head=R('#2a1204', '#c0761e', '#ffe090'), keep=0.12,
-                   glow=('#ff5a08', '#fff0a0'), g=dict(under=0.5, wing=0.5, head=0.6, body=0.05), eye='#c8ff50'),
-    'frost': dict(src='dragon_undead', out='dragon_frost', clips=FLY, gamma=0.78,
-                  body=R('#0a1c3a', '#4a90d0', '#f0fcff'), back=R('#081430', '#3070b8', '#d8f4ff'), under=R('#102a50', '#70c0e8', '#ffffff'),
-                  wing=R('#0a2a5a', '#3aa0e0', '#c8f8ff'), head=R('#0a1c3a', '#5aa0d8', '#ffffff'), keep=0.08,
-                  glow=('#0a70ff', '#b0ffff'), g=dict(under=1.3, wing=0.7, head=0.7, body=0.25), eye='#80ffff'),
+                   body=R('#1c0c04', '#8a4a14', '#e8b060'), back=R('#0c0502', '#3c1a08', '#8a5020'), under=R('#6a4a20', '#f0d090', '#fffbe0'),
+                   wing=R('#5a1402', '#ff7a14', '#ffd060'), head=R('#4a2408', '#e0a040', '#fff2c0'), keep=0.08,
+                   glow=('#ff5a08', '#fff0a0'), g=dict(under=0.5, wing=0.5, head=0.6, body=0.05), eye='#d8ff60'),
+    'frost': dict(src='dragon_undead', out='dragon_frost', clips=FLY, gamma=0.8,
+                  body=R('#06122c', '#2a6ab0', '#c8ecff'), back=R('#040c20', '#184a8c', '#8ac8f0'), under=R('#1c4a7a', '#a0e0ff', '#ffffff'),
+                  wing=R('#0c3a6a', '#6ac4f4', '#e8fcff'), head=R('#1c3a6a', '#a8d8f8', '#ffffff'), keep=0.05,
+                  glow=('#0a70ff', '#b0ffff'), g=dict(under=1.3, wing=0.7, head=0.7, body=0.25), eye='#a0ffff'),
 }
 
 
@@ -118,11 +118,12 @@ def repaint(src, U, cov, L):
     lum = src[..., :3] @ np.array([0.3, 0.55, 0.15], np.float32)
     lo, hi = np.percentile(lum[cov], [1.5, 99])
     t = np.clip((lum - lo) / (hi - lo), 0, 1) ** L['gamma']
-    # local contrast: the scales and wrinkles carry the form at game size
-    t = np.clip(t + (t - blur(t, 5)) * 0.9, 0, 1)
+    # the scan's scale noise is halved (it turns to static at game size); each region keeps near its own value
+    t = 0.62 * blur(t, 5) + 0.38 * t
+    t = np.clip(0.5 + (t - 0.5) * 0.9, 0, 1)
     col = ramp(L['body'], t)
     for k in ('back', 'under', 'head', 'wing'):
-        m = np.clip(U[k], 0, 1)[..., None] * (0.85 if k in ('back', 'head') else 1)
+        m = np.clip(U[k] * 1.25, 0, 1)[..., None] * (0.9 if k == 'back' else 1)
         col = col * (1 - m) + ramp(L[k], t) * m
     # some of the painted hue variety back
     s = src[..., :3]; chroma = s - lum[..., None]
@@ -156,7 +157,7 @@ def eye_mask(me, arm, U, src, cov):
         if bl[y, x] <= 0: break
         yy, xx = np.ogrid[:SIZE, :SIZE]
         d = np.hypot(yy - y, xx - x)
-        out = np.maximum(out, np.clip(1.6 - d / 6, 0, 1)); bl = bl * (d > 40)
+        out = np.maximum(out, np.clip(1.7 - d / 9, 0, 1)); bl = bl * (d > 40)
     return out
 
 

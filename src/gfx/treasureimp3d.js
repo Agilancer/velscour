@@ -8,11 +8,12 @@ import { G } from '../state.js';
 import { isoX, isoY } from '../core/view.js';
 import { drawBeast, beastReady, preloadBeasts } from './beasts3d.js';
 import { registerBeastLook } from './beastlooks.js';
-import { addEffect, glowSprite, spawn, sparkle } from './vfx.js';
+import { addEffect, glowSprite, spawn, sparkle, floatText } from './vfx.js';
+import { sfx } from '../core/audio.js';
 
 const ID = 'treasureimp', TAU = Math.PI * 2, LIGHT = 1.5;   // it carries a lantern: lit brighter than the dungeon's own
 const DUR = { idle: 2.9, peek: 3.58, run: 1.125, panic: 0.667, hit: 1.29, death: 2.375, jump: 2.2, taunt: 3.17 };
-export const impK = () => (G.touch ? 50 : 60);        // px per model unit: the imp stands ~0.95, its sack tops 1.2
+export const impK = () => (G.touch ? 76 : 92);        // px per model unit: the imp stands ~0.95, its sack tops 1.2
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a)), clamp = (x, a, b) => Math.max(a, Math.min(b, x)), ease = (u) => u * u * (3 - 2 * u);
 const rnd = (a, b) => a + Math.random() * (b - a);
 const GEMS = ['#ff3048', '#30e8a8', '#60b0ff'];
@@ -63,25 +64,28 @@ function shadow(ctx, px, py, k, a = 0.32) { ctx.globalAlpha = a; ctx.fillStyle =
 function aura(ctx, px, py, k, a) {
   const g = glowSprite('#ffd040'), r = k * 1.25;
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
-  ctx.drawImage(g, px - r, py - r * 0.45, r * 2, r * 0.9); ctx.drawImage(g, px - r * 0.8, py - k * 0.75 - r * 0.8, r * 1.6, r * 1.6);
+  ctx.drawImage(g, px - r, py - r * 0.45, r * 2, r * 0.9); ctx.drawImage(g, px - r, py - k * 0.6 - r, r * 2, r * 2);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 }
-/** The sack, lantern and keys swinging: b the bounce (-1..1), s a slower sway. */
-const swing = (b, s, burst = 1) => ({ sack: { rx: b * 0.13, rz: s * 0.07, s: burst }, sack_top: { rx: b * 0.2, rz: s * 0.14 }, lantern: { rx: -b * 0.5, rz: s * 0.6 }, keys: { rx: b * 0.5, rz: s * 0.35 } });
+/** The sack, lantern and keys swinging: b the bounce (-1..1), s a slower sway, sq a squash (a blow); his head is drawn large. */
+function cackle(v = 0.5) { sfx('poison', v, 2.3); setTimeout(() => sfx('poison', v * 0.9, 2.8), 130); setTimeout(() => sfx('poison', v * 0.8, 2.5), 260); }
+const swing = (b, s, burst = 1, sq = 0) => ({ mixamorigHead: { s: 1.38 }, sack: { rx: b * 0.13, rz: s * 0.07, sx: burst * 0.9 * (1 + 0.3 * sq), sz: burst * 0.9 * (1 + 0.3 * sq), sy: burst * 0.9 * (1 - 0.4 * sq) }, sack_top: { rx: b * 0.2, rz: s * 0.14 }, lantern: { rx: -b * 0.5, rz: s * 0.6 }, keys: { rx: b * 0.5, rz: s * 0.35 } });
 
 function drawImp(ctx, m) {
   if (!beastReady(ID)) return false;
-  const S = m.imp3 || (m.imp3 = { yaw: m.facing || 0, lx: m.x, ly: m.y, last: G.time, runT: 0, mv: 0, near: 0, hp: m.hp, hitT: 0, idleT: 0, idle: 'taunt', wob: 0, wobV: 0, trail: 0, drop: 0 });
+  const S = m.imp3 || (m.imp3 = { yaw: m.facing || 0, lx: m.x, ly: m.y, last: G.time, runT: 0, mv: 0, near: 0, hp: m.hp, hitT: 0, idleT: 0, idle: 'taunt', wob: 0, wobV: 0, trail: 0, drop: 0, jing: 0, tele: 0 });
   if (m.dead) return true; // its end is played by ImpDeath / ImpEscape
   const dt = clamp(G.time - S.last, 0, 0.1); S.last = G.time;
   const dx = m.x - S.lx, dy = m.y - S.ly, moved = Math.hypot(dx, dy), p = G.player; S.lx = m.x; S.ly = m.y;
   const moving = dt > 0 && moved / dt > 0.4 && moved < 2;
   const pd = p ? Math.hypot(p.x - m.x, p.y - m.y) : 99;
   S.mv += ((moving ? 1 : 0) - S.mv) * Math.min(1, dt * 9); S.near += ((pd < 4.5 ? 1 : 0) - S.near) * Math.min(1, dt * 5);
-  if (moving) { S.yaw += wrap(Math.atan2(dy, dx) - S.yaw) * Math.min(1, dt * 12); S.runT += moved / (S.near > 0.5 ? 1.9 : 2.4); S.idleT = 0; S.idle = 'taunt'; }
+  if (moving) { S.yaw += wrap(Math.atan2(dy, dx) - S.yaw) * Math.min(1, dt * 12); S.runT += moved / (S.near > 0.5 ? 1.9 : 2.4); S.idleT = 0; S.idle = 'taunt'; S.jeer = false;
+    if ((S.jing -= dt) <= 0) { S.jing = 0.42; sfx('gold', 0.35); } }   // the hoard jingles as he runs
   else if (dt > 0) { // nobody near: it turns to jeer at the hero, then peers about for more to steal
     if (S.mv < 0.2) S.idleT += dt;
-    if (S.idleT > DUR[S.idle]) { S.idleT = 0; S.idle = S.idle === 'taunt' ? 'peek' : 'taunt'; }
+    if (S.idleT > DUR[S.idle]) { S.idleT = 0; S.idle = S.idle === 'taunt' ? 'peek' : 'taunt'; S.jeer = false; }
+    if (S.idle === 'taunt' && !S.jeer && S.idleT > 0.5 && pd < 16) { S.jeer = true; cackle(0.4); floatText(m.x, m.y, 80, 'Hee hee hee!', '#ffe070', 12, { life: 1.2 }); }
     if (p && S.idle === 'taunt') S.yaw += wrap(Math.atan2(p.y - m.y, p.x - m.x) - S.yaw) * Math.min(1, dt * 5);
   }
   if (m.hp < S.hp - 0.5) { // struck: a flinch, and the sack coughs coins
@@ -99,16 +103,21 @@ function drawImp(ctx, m) {
   if (S.mv > 0.4 && (S.trail -= dt) <= 0) {
     S.trail = 0.05;
     spawn({ type: 'glow', x: m.x - Math.cos(S.yaw) * 0.35 + rnd(-0.15, 0.15), y: m.y - Math.sin(S.yaw) * 0.35 + rnd(-0.15, 0.15), z: rnd(4, 40), vz: rnd(-6, 14), life: rnd(0.35, 0.8), size: rnd(1.5, 3.6), size1: 0, color: Math.random() < 0.3 ? '#fff6c0' : '#ffc830', add: true });
-    if ((S.drop -= 1) <= 0) { S.drop = Math.round(rnd(5, 10)); coinSpray(m.x - Math.cos(S.yaw) * 0.3, m.y - Math.sin(S.yaw) * 0.3, 34, 1, { sp: 0.7, vz: 90, life: 0.8 }); }
+    if ((S.drop -= 1) <= 0) { S.drop = Math.round(rnd(2, 4)); coinSpray(m.x - Math.cos(S.yaw) * 0.3, m.y - Math.sin(S.yaw) * 0.3, 34, 1, { sp: 0.7, vz: 90, life: 0.8 }); }
   }
   shadow(ctx, px, py, k);
   aura(ctx, px, py, k, 0.3 + 0.08 * Math.sin(G.time * 5));
   const hit = S.hitT > 0 ? Math.sin(Math.PI * (1 - S.hitT / 0.42)) : 0, idle = S.idle;
-  const o = { key: 'imp' + m.id, k, yaw: S.yaw, bones: swing(b, sw), flash: m.flash > 0 ? Math.min(1, m.flash * 8) * 0.4 : 0, alpha: m.alpha ?? 1, light: LIGHT };
+  const tele = S.tele > 0 ? clamp((G.time - S.tele) / 0.6, 0, 1) : 0;
+  if (tele > 0) { // the rift is coming for him: violet light gathers, he cackles
+    const g = glowSprite('#b060ff'), r = k * (0.5 + 0.9 * tele); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.75 * tele; ctx.drawImage(g, px - r, py - k * 0.6 - r, r * 2, r * 2); ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = '#d090ff'; ctx.lineWidth = 2; ctx.globalAlpha = tele; ctx.beginPath(); ctx.ellipse(px, py, k * 0.7 * (1.4 - 0.6 * tele), k * 0.35 * (1.4 - 0.6 * tele), 0, G.time * 6, G.time * 6 + 4.5); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  const o = { key: 'imp' + m.id, k, yaw: S.yaw, bones: swing(b, sw, 1, hit), outline: 1.3, glow: tele ? [0.3 * tele, 0.1 * tele, 0.5 * tele] : undefined, flash: m.flash > 0 ? Math.min(1, m.flash * 8) * 0.4 : 0, alpha: m.alpha ?? 1, light: LIGHT };
   if (hit > 0.05) Object.assign(o, { clip: S.mv > 0.5 ? run : idle, t: S.mv > 0.5 ? rt : S.idleT, clip2: 'hit', t2: 0.12 + (0.42 - S.hitT) * 1.1, mix: hit * 0.75 });
   else Object.assign(o, { clip: idle, t: S.idleT, loop: true, clip2: run, t2: rt, mix: S.mv });
   const ok = drawBeast(ctx, ID, px, py - hop, o);
-  m.screenTop = py - k * 1.3;
+  m.screenTop = py - k * 1.15;
   return ok;
 }
 registerBeastLook(['treasure_imp'], drawImp);
@@ -133,7 +142,7 @@ class ImpDeath {
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y), al = clamp((this.dur - this.t) / 0.8, 0, 1), flat = 1 - 0.62 * ease(clamp((this.t - 0.1) / 0.6, 0, 1));
     shadow(ctx, px, py, this.k, 0.3 * al);
     if (this.t < 0.7) aura(ctx, px, py, this.k * (1 + this.t * 1.5), 0.55 * (1 - this.t / 0.7));
-    drawBeast(ctx, ID, px, py, { key: 'impdead' + this.id, k: this.k, yaw: this.yaw, clip: 'death', t: this.t * 1.35, loop: false, bones: swing(Math.sin(this.t * 14) * (1 - Math.min(1, this.t)), 0, flat), alpha: al, light: LIGHT,
+    drawBeast(ctx, ID, px, py, { key: 'impdead' + this.id, k: this.k, yaw: this.yaw, clip: 'death', t: this.t * 1.35, loop: false, bones: swing(Math.sin(this.t * 14) * (1 - Math.min(1, this.t)), 0, flat), alpha: al, light: LIGHT, outline: 1.3,
       flash: this.t < 0.12 ? 0.5 : 0 });
   }
 }
@@ -173,13 +182,18 @@ class ImpEscape {
     shadow(ctx, px, py, this.k * s, 0.3 * (1 - u));
     // a crouch, the spring, then tucked small into the rift
     drawBeast(ctx, ID, px, py - z, { key: 'impgone' + this.id, k: this.k * s, yaw: this.a, clip: 'jump', t: t < 0.3 ? 0.25 + t * 1.2 : 0.62 + u * 0.75, loop: false, pitch: 0.5 * Math.sin(u * Math.PI),
-      bones: swing(Math.sin(t * 16) * 0.8, 0), alpha: 1 - clamp((u - 0.8) / 0.2, 0, 1), glow: [0.22 * u, 0.12 * u, 0.3 * u], light: LIGHT });
+      bones: swing(Math.sin(t * 16) * 0.8, 0), alpha: 1 - clamp((u - 0.8) / 0.2, 0, 1), glow: [0.22 * u, 0.12 * u, 0.3 * u], light: LIGHT, outline: 1.3 });
   }
 }
 /** The imp died: play its tumble and the bursting sack. False while the model is not there (the old gore plays as before). */
 export function impDeathFx(m, src) {
   if (!m.imp3 || !beastReady(ID) || !m.world) return false;
   m.world.addHazard(new ImpDeath(m, src)); return true;
+}
+/** 0.6 s before its time is up: the telegraph (a cackle, violet light gathering), so the miss is fair. */
+export function impTelegraph(m) {
+  if (!m.imp3 || m.imp3.tele) return;
+  m.imp3.tele = G.time; cackle(0.6); floatText(m.x, m.y, 84, 'Hee hee! Too slow!', '#e0b0ff', 13, { life: 1.1 });
 }
 /** The imp got away: it leaps into a rift. */
 export function impEscapeFx(m) {

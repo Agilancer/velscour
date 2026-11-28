@@ -14,10 +14,10 @@ const TAU = Math.PI * 2, wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a)), cla
 const ease = (u) => u * u * (3 - 2 * u);
 /** Per summon: model, px per model unit, hover height, wing beats a second, the cell it needs, where its head tops out. */
 export const BIRDS = {
-  phoenix: { id: 'phoenix', k: 17, hover: 30, beat: 1.3, rad: 3.05, top: 1.1, born: 0.9, fire: true, pts: ['tailtip0', 'tailtip2', 'tailtip4', 'tailtip6', 'tip_L', 'tip_R'] },
-  raven: { id: 'raven', k: 16, hover: 22, beat: 2.1, rad: 2, top: 0.9, born: 0.3 },
+  phoenix: { id: 'phoenix', k: 19, hover: 30, beat: 1.3, rad: 3.05, top: 1.1, born: 0.9, fire: true, pts: ['tailtip0', 'tailtip2', 'tailtip4', 'tailtip6', 'tip_L', 'tip_R'] },
+  raven: { id: 'raven', k: 22, hover: 26, beat: 2.1, rad: 2, top: 0.9, born: 0.3 },
 };
-const ATK = 0.5, DUR = { fly: 1, hover: 2 / 3, strike: 2 / 3, flare: 7 / 6 };
+const RAVEN_PTS = ['head'], ATK = 0.5, DUR = { fly: 1, hover: 2 / 3, strike: 2 / 3, flare: 7 / 6 };
 export function preloadBirds(...keys) { for (const k of keys) if (BIRDS[k]) preloadBeasts(BIRDS[k].id); }
 
 function drawBird(ctx, m) {
@@ -49,7 +49,7 @@ function drawBird(ctx, m) {
   const lx = m.lunge > 0 ? (Math.cos(m.facing) - Math.sin(m.facing)) * m.lunge * 6 : 0, ly = m.lunge > 0 ? (Math.cos(m.facing) + Math.sin(m.facing)) * m.lunge * 3 : 0;
   const a = (m.alpha ?? 1) * Math.min(1, born * (D.fire ? 4 : 2)), x = px + lx, y = py + ly - z;
   const o = { key: S.key, k, yaw: S.yaw, roll: S.roll, pitch, clip, t, clip2, t2, mix, loop: false, rad: D.rad, alpha: a, flash: m.flash > 0 ? Math.min(1, m.flash * 8) * 0.4 : 0 };
-  ctx.fillStyle = 'rgba(0,0,0,' + 0.28 * a + ')'; ctx.beginPath(); ctx.ellipse(px, py, k * 0.75, k * 0.3, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,' + 0.34 * a + ')'; ctx.beginPath(); ctx.ellipse(px, py, k * 0.75, k * 0.3, 0, 0, TAU); ctx.fill();
   if (D.fire) {
     o.points = D.pts; o.bones = firebirdSway(S.t, 0, S.sway);
     const g = glowSprite('#ff7a1c'), r = k * (2.1 + 1.6 * heat);
@@ -69,8 +69,13 @@ function drawBird(ctx, m) {
   } else {
     const md = beast(D.id);
     if (md.ready && !md.soft) { md.soft = true; for (const mt of md.mats) mt.alphaToCoverage = true; }   // ragged feather edges, softened
-    o.ember = 2 + (S.atk > 0 ? 2 : 0); o.light = 1.5;   // black birds over dark floors: lit hard, their sheen and red eyes kept bright
+    o.ember = 3 + (S.atk > 0 ? 3 : 0); o.light = 1.7; o.points = RAVEN_PTS;
+    const cg = glowSprite('#7a6cff'), cr = k * 1.7;   // a cold halo behind it, so the black bird stands off the floor
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 * a; ctx.drawImage(cg, x - cr, y - cr * 0.8, cr * 2, cr * 1.6); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';   // black birds over dark floors: lit hard, their sheen and red eyes kept bright
     if (!drawBeast(ctx, D.id, x, y, o)) return (S.ok = false);
+    drawBeast(ctx, D.id, x, y, { ...o, add: true, alpha: a * 0.4 });   // its violet sheen, as light
+    const hp = beastPoint(S.key, 'head');
+    if (hp) { const eg = glowSprite('#ff2a20'), er = k * (0.3 + (S.atk > 0 ? 0.2 : 0)); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.85 * a; ctx.drawImage(eg, x + hp[0] - er, y + hp[1] - er, er * 2, er * 2); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }   // red eyes burning
   }
   S.ok = true; m.screenTop = y - k * D.top;
   if (m.drawOverhead) m.drawOverhead(ctx, px, m.screenTop - 4, k * 1.2);

@@ -37,13 +37,28 @@ export const GRUBS = {
 };
 const kinOf = (m) => m.world.creatures.filter((c) => c.grub && !c.dead && c.owner === m.owner);
 
-/** Which grub the next cast brings: the first coloured kind the Witch has none of, else a white one. Returns [key, def]. */
+/** The order a brood hatches in: a white to bite, the Bloat to hold the line, the Mender to keep them alive, then the rest. */
+export const HATCH = ['white', 'orange', 'pink', 'yellow', 'green', 'brown'];
+const broodOf = (owner) => (owner && owner.world ? owner.world.creatures.filter((c) => c.grub && !c.dead && c.owner === owner) : []);
+/** Which grub the next hatch brings: the first kind in HATCH the Witch has none of, else a white one; null when the brood is full. */
 export function grubDef(owner) {
-  const have = new Set(owner && owner.world ? owner.world.creatures.filter((c) => c.grub && !c.dead && c.owner === owner).map((c) => c.grub.kind) : []);
-  const k = !have.has('white') ? 'white' : GRUB_KINDS.find((c) => !have.has(c)) || 'white';
+  const mine = broodOf(owner);
+  if (mine.length >= GRUB_MAX) return [null, null];
+  const have = new Set(mine.map((c) => c.grub.kind)), k = HATCH.find((c) => !have.has(c)) || 'white';
   return ['grub_' + k, SUMMONS['grub_' + k]];
 }
-/** Which grub makes room when the brood is full: the oldest white one (a coloured one only if all ten are coloured: never). */
+/** A cast on a full brood hatches nothing (no grub is thrown away): it rouses them instead, once a cast: +20% life and a
+ *  short frenzy. Returns true when it did. */
+export function rouseBrood(owner) {
+  const mine = broodOf(owner);
+  if (mine.length < GRUB_MAX) return false;
+  if (owner._grubRouse && owner.world.time - owner._grubRouse < 0.5) return true;
+  owner._grubRouse = owner.world.time;
+  for (const g of mine) { mend(g, g.maxHp * 0.2); g.grub.cds.pulse = Math.min(g.grub.cds.pulse, 0.5); g.grub.glow = 1; }
+  floatText(owner.x, owner.y, 80, 'The brood stirs', '#d8ffb0', 12, { life: 1.2 }); sfx('summon', 0.5, 0.6);
+  return true;
+}
+/** Which grub makes room if ever the brood overflows: the oldest white one. */
 export function grubToReplace(mine) { return mine.find((c) => c.grub && c.grub.kind === 'white') || mine[0]; }
 
 export function attachGrub(m, def) {
@@ -53,6 +68,7 @@ export function attachGrub(m, def) {
   m.r = 0.5; m.hop = false; m.grubBase = m.dmgReduce || 0;
   if (kind === 'orange') m.taunt = true;
   watch(m);
+  sfx('gore', 0.45, kind === 'white' ? 0.8 : 1.1); voice(m, 0.5);
 }
 
 // ------------------------------------------------------------------ deaths: a grub that dies writhes, curls and deflates
@@ -99,9 +115,23 @@ function pool(m, S, x, y, o) {
   w.addHazard(new Area({ world: w, src: m, x, y, r: o.r || 1.3, dur: o.dur || 4, tick: 0.5, fx: o.fx || 'poison', el: o.el || 'poison', dmg: [m.dmg * (o.mul || 0.3) * 0.9, m.dmg * (o.mul || 0.3) * 1.1], slow: !!o.slow, o: o.hit || {} }));
 }
 function ring(m, S, r, w = 4) { addEffect(new Ring(m.x, m.y, 0.2, r, 0.45, S.K.glow, w, { fill: true })); S.glow = 1; }
+/** The Witch's healing from her brood is capped: at most 12% of her life every 6 s, however many grubs heal her. */
+function mendOwner(m, n) {
+  const o = m.owner;
+  if (!o || o.dead) return;
+  const B = o._grubMend && o.world.time - o._grubMend.t < 6 ? o._grubMend : (o._grubMend = { t: o.world.time, used: 0 });
+  const give = Math.min(n, o.maxHp * 0.12 - B.used);
+  if (give > 0) { B.used += give; mend(o, give); }
+}
+/** Each kind's voice: a pitch on the shared wet sounds. */
+const VOICE = { white: 0.8, yellow: 1.25, green: 1.0, orange: 0.6, brown: 0.7, pink: 1.45 };
+function voice(m, v = 0.35) { const k = m.grub.kind; sfx(k === 'brown' ? 'blood' : k === 'yellow' ? 'acid' : 'squish', v, VOICE[k] * rand(0.9, 1.1)); }
+/** The name of a signature move over the grub that casts it. */
+function callout(m, S, name) { floatText(m.x, m.y, 70, name, S.K.glow, 11, { life: 1.1, vz: 12 }); }
 function mend(c, n) { if (!c || c.dead || !(n > 0)) return; c.heal ? c.heal(n, false) : (c.hp = Math.min(c.maxHp, c.hp + n)); spawn({ type: 'glow', x: c.x, y: c.y, z: 30, vz: 30, life: 0.6, size: 5, size1: 0, color: '#a0ff90', add: true }); }
 const foes = (m, r, x = m.x, y = m.y) => m.world.hostiles(m.team, x, y, r);
 
+const PULSE = { white: 'Rot Wave', yellow: 'Corrode', green: 'Pandemic', orange: 'Burst Pustules', brown: 'Blood Feast', pink: 'Sickly Spores' };
 // the nine moves: what each does for a grub of kind k
 const MOVES = {
   bite(m, S, t) {
@@ -109,9 +139,9 @@ const MOVES = {
       if (t.dead || dist(m.x, m.y, t.x, t.y) > m.atkRange(t) + 1.1) return;
       m.lunge = 1;
       const k = S.kind, d = m.deal(t, m.dmg * (k === 'white' ? 1.15 : 1), S.K.el, opt(m, { poison: k === 'green', bleed: k === 'brown', burn: k === 'orange' }));
-      if (k === 'brown' && m.owner && d > 0) mend(m.owner, Math.min(m.owner.maxHp * 0.02, d * 0.12)); // the Leech's bite feeds the Witch
+      if (k === 'brown' && d > 0) mendOwner(m, Math.min(m.owner ? m.owner.maxHp * 0.02 : 0, d * 0.12)); // the Leech's bite feeds the Witch
       spawn({ type: 'glow', x: t.x, y: t.y, z: 18, life: 0.2, size: 6, size1: 14, color: S.K.glow, add: true });
-      if (chance(0.5)) sfx('squish', 0.35, rand(0.6, 0.9));
+      if (chance(0.5)) voice(m);
     }, t);
     m.cd = m.atkCd;
   },
@@ -156,31 +186,36 @@ const MOVES = {
   pulse(m, S, t) {
     const k = S.kind;
     S.cds.pulse = rand(9, 13);
+    const far = S.K.role !== 'melee', tx = far ? t.x : m.x, ty = far ? t.y : m.y;
+    callout(m, S, PULSE[k]);
     act(m, S, 'pulse', () => {
-      const R = 2.6, list = foes(m, R);
-      ring(m, S, R, 5); sfx(k === 'brown' ? 'blood' : 'poison', 0.6);
-      if (k === 'white') { aoe(m.world, m, m.x, m.y, R, m.dmg * 1.2, 'poison', { poison: true }); S.fed = Math.min(6, S.fed + 1); }                        // Rot Wave
-      else if (k === 'yellow') { aoe(m.world, m, m.x, m.y, R, m.dmg * 0.8, 'poison', { burn: true }); for (const c of list) if (c.curses) c.curses.amp = { t: 6, amt: 25, src: m.owner }; } // Corrode
-      else if (k === 'green') { aoe(m.world, m, m.x, m.y, R + 0.6, m.dmg * 1.1, 'poison', { poison: true }); pool(m, S, m.x, m.y, { r: R, dur: 4, mul: 0.3, hit: { poison: true } }); } // Pandemic
-      else if (k === 'orange') { aoe(m.world, m, m.x, m.y, R, m.dmg * 1.8, 'fire', { knock: 1.6, burn: true, slow: true }); burst(m.x, m.y, 20, 'fire', 16, 3); }  // Burst Pustules
+      const R = 2.6, list = foes(m, R, tx, ty);
+      ring(m, S, R * 0.5, 4); if (far) { addEffect(new Ring(tx, ty, 0.2, R, 0.5, S.K.glow, 5, { fill: true })); gob(m, S, { x: tx, y: ty }, { lob: true, size: 2, z: 40, mul: 0.01 }); }
+      sfx(k === 'brown' ? 'blood' : 'poison', 0.6, VOICE[k]);
+      if (k === 'white') aoe(m.world, m, tx, ty, R, m.dmg * 1.2, 'poison', { poison: true });                                                                        // Rot Wave
+      else if (k === 'yellow') { aoe(m.world, m, tx, ty, R, m.dmg * 0.8, 'poison', { burn: true }); for (const c of list) if (c.curses) c.curses.amp = { t: 6, amt: 25, src: m.owner }; } // Corrode
+      else if (k === 'green') { aoe(m.world, m, tx, ty, R + 0.6, m.dmg * 1.1, 'poison', { poison: true }); pool(m, S, tx, ty, { r: R * 0.8, dur: 4, mul: 0.3, hit: { poison: true } }); } // Pandemic
+      else if (k === 'orange') { aoe(m.world, m, tx, ty, R, m.dmg * 1.8, 'fire', { knock: 1.6, burn: true, slow: true }); burst(tx, ty, 20, 'fire', 16, 3); }  // Burst Pustules
       else if (k === 'brown') { // Blood Feast: drinks the crowd, feeds the Witch and the brood
         let got = 0;
         for (const c of list) got += m.deal(c, m.dmg * 0.9, 'blood', { bleed: true }) || 0;
-        if (got > 0) { const o = m.owner; if (o) mend(o, Math.min(o.maxHp * 0.12, got * 0.3)); for (const g of kinOf(m)) mend(g, g.maxHp * 0.08); }
+        if (got > 0) { mendOwner(m, got * 0.3); for (const g of kinOf(m)) mend(g, g.maxHp * 0.06); }
       } else if (k === 'pink') { for (const c of list) if (c.curses) { c.curses.weaken = { t: 6, amt: 30, src: m.owner }; c.curses.slow = { t: 4, amt: 0.45, src: m.owner }; } } // Sickly Spores
     }, t);
   },
   heal(m, S, who) {
     S.cds.heal = S.kind === 'pink' ? rand(5, 7) : rand(11, 15);
+    callout(m, S, S.kind === 'pink' ? 'Soothing Ichor' : 'Regurgitate');
     act(m, S, 'heal', () => {
       const pink = S.kind === 'pink', o = m.owner;
       ring(m, S, pink ? 4 : 2, 3); sfx('heal', 0.4, 1.2);
-      if (pink) { for (const g of kinOf(m)) if (dist(g.x, g.y, m.x, m.y) < 5) mend(g, g.maxHp * 0.16); if (o && dist(o.x, o.y, m.x, m.y) < 7) mend(o, o.maxHp * 0.07); } // Soothing Ichor
-      else if (who && !who.dead) mend(who, who === o ? o.maxHp * 0.04 : who.maxHp * 0.14);                                                                               // Regurgitate
+      if (pink) { for (const g of kinOf(m)) if (dist(g.x, g.y, m.x, m.y) < 5) mend(g, g.maxHp * 0.16); if (o && dist(o.x, o.y, m.x, m.y) < 7) mendOwner(m, o.maxHp * 0.07); } // Soothing Ichor
+      else if (who && !who.dead) who === o ? mendOwner(m, o.maxHp * 0.04) : mend(who, who.maxHp * 0.14);                                                                               // Regurgitate
     }, who && who !== m ? who : null);
   },
   ward(m, S) {
     S.cds.ward = S.kind === 'pink' ? rand(10, 13) : rand(13, 17);
+    callout(m, S, S.kind === 'pink' ? 'Chrysalis Ward' : 'Molt');
     act(m, S, 'ward', () => {
       const pink = S.kind === 'pink', o = m.owner;
       ring(m, S, pink ? 4 : 1.4, 3); sfx('heal', 0.35, 0.7);
@@ -251,11 +286,15 @@ export function grubUpdate(m, dt) {
     const far = o && dist(m.x, m.y, o.x, o.y) > 4;
     setAnim(S, m.moving ? (far ? 'slither_fast' : 'slither') : 'idle');
     if (far && m.moving) w.map.move(m, Math.cos(m.facing) * m.speed * 0.45 * dt, Math.sin(m.facing) * m.speed * 0.45 * dt); // hurries to catch up
+    else if (o && dist(m.x, m.y, o.x, o.y) < 2.4) { const a = angleTo(o.x, o.y, m.x, m.y); w.map.move(m, Math.cos(a) * 1.6 * dt, Math.sin(a) * 1.6 * dt); } // never piles onto the Witch
     return;
   }
   const d = dist(m.x, m.y, t.x, t.y), near = foes(m, 2.2).length, los = d < 9 && w.map.los(m.x, m.y, t.x, t.y);
   m.trackTarget(t, dt);
-  if (S.cds.pulse <= 0 && (S.kind === 'pink' ? foes(m, 2.6).length >= 1 : near >= (S.kind === 'white' ? 3 : 2))) return MOVES.pulse(m, S, t);
+  if (S.cds.pulse <= 0) { // the signature magic: a melee grub's round itself, a ranged one's flung onto its target's pack
+    const ok = K.role === 'melee' ? near >= (S.kind === 'white' ? 3 : 2) : los && d <= 7.5 && foes(m, 2.6, t.x, t.y).length >= (S.kind === 'pink' ? 1 : 2);
+    if (ok) return MOVES.pulse(m, S, t);
+  }
   const reach = m.atkRange(t) + 0.35;
   if (K.role === 'melee') {
     if (d <= reach) {
@@ -265,9 +304,9 @@ export function grubUpdate(m, dt) {
       if (m.cd <= 0) return MOVES.bite(m, S, t);
       return;
     }
-    if (los && d > 3) { // on the way in: a gob of bile, now and then a barrage or a lob at a crowd
+    if (los && d > 3 && S.kind !== 'orange') { // on the way in: a gob of bile, a lob at a crowd; a barrage only from far off (the Bloat never stops: it must arrive)
       if (S.cds.lob <= 0 && foes(m, 1.6, t.x, t.y).length >= 3) return MOVES.lob(m, S, t);
-      if (S.cds.barrage <= 0 && d > 4.5) return MOVES.barrage(m, S, t);
+      if (S.cds.barrage <= 0 && d > 5.5) return MOVES.barrage(m, S, t);
       if (S.cds.spit <= 0) return MOVES.spit(m, S, t);
     }
     m.chase(dt, t); setAnim(S, m.moving ? (d > 3.5 ? 'slither_fast' : 'slither') : 'idle');
@@ -286,6 +325,13 @@ export function grubUpdate(m, dt) {
     return;
   }
   m.face(angleTo(m.x, m.y, t.x, t.y));
+  if (d < 2.8 && !S.cornered) { // too close: slither back out of reach first (stuck against a wall, it fights where it is)
+    const a = angleTo(t.x, t.y, m.x, m.y), x0 = m.x, y0 = m.y;
+    m.moveToward(m.x + Math.cos(a), m.y + Math.sin(a), dt, m.speed * 0.9); setAnim(S, 'slither');
+    if (Math.hypot(m.x - x0, m.y - y0) < m.speed * dt * 0.2) S.cornered = 1.5;
+    return;
+  }
+  if (S.cornered) S.cornered = Math.max(0, S.cornered - dt) || 0;
   if (S.cds.lob <= 0 && (foes(m, 1.6, t.x, t.y).length >= 2 || S.kind === 'green')) return MOVES.lob(m, S, t);
   if (S.cds.barrage <= 0) return MOVES.barrage(m, S, t);
   if (S.cds.spit <= 0) return MOVES.spit(m, S, t);

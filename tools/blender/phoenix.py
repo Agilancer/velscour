@@ -38,7 +38,7 @@ SHEEN = [(0, (.34, .3, .75)), (.5, (.24, .16, .6)), (1, (.3, .12, .55))]
 SPEC = {
     'phoenix': dict(fire=True, pal=FIRE, glow=GLOW, em=1.0, bodyem=1.0, crest=7, plumes=7, plume=[1.5, 1.72, 1.95, 2.2, 1.95, 1.72, 1.5], retrix=0.5, rag=0.45,
                     prim=[.56, .6, .64, .69, .75, .81, .86, .88, .83, .7], span=1.16, beak='hook', tex=1024, radius=3.05,
-                    body_t=[(0, .66), (.3, .52), (.55, .4), (.75, .3), (1, .17)], eye=(1, .95, .6)),
+                    body_t=[(0, .7), (.3, .56), (.5, .4), (.66, .2), (.8, .3), (.9, .4), (1, .46)], eye=(1, .95, .6)),
     'raven': dict(fire=False, pal=NIGHT, glow=SHEEN, em=0.32, bodyem=0.3, crest=0, plumes=0, plume=[], retrix=0.62, rag=1.0,
                   prim=[.46, .48, .5, .53, .57, .61, .64, .65, .6, .5], span=0.9, beak='crow', tex=512, radius=2.0,
                   body_t=[(0, .75), (.3, .6), (.55, .5), (.75, .4), (1, .3)], eye=(1, .1, .05)),
@@ -119,7 +119,7 @@ def body_tex(S, eye_p, eye_u):
     w = h = 512
     U = np.linspace(0, 1, w, endpoint=False)[None, :] * np.ones((h, 1)); V = np.linspace(0, 1, h)[:, None] * np.ones((1, w))
     pos = [b[0] for b in S['body_t']]
-    tb = np.interp(1 - V, pos, [b[1] for b in S['body_t']]) + 0.07 * np.cos((U - 0.5) * 2 * pi)   # redder along the back
+    tb = np.interp(1 - V, pos, [b[1] for b in S['body_t']]) + 0.12 * np.cos((U - 0.5) * 2 * pi)   # redder along the back, white-hot on the breast
     col = ramp(S['pal'], tb + 0.2); em = np.zeros((h, w, 3)); nz = noise(w, h, 40, 11)
     rows = 46
     for j in range(rows, -2, -1):                                       # rump first: each row lies over the one behind
@@ -142,7 +142,7 @@ def body_tex(S, eye_p, eye_u):
         du = (U - ue) * 2.4; dv = V - ve
         mask = np.exp(-((du / 0.085) ** 2 + ((dv - 0.25 * np.abs(du)) / 0.03) ** 2)) + 0.8 * np.exp(-(((du) / 0.03) ** 2 + ((dv - 0.035) / 0.04) ** 2))
         mk = np.clip(mask, 0, 1)[..., None]
-        col = col * (1 - mk) + np.array(S['pal'][-2][1]) * 0.8 * mk; em = em * (1 - mk * 0.8)
+        col = col * (1 - mk) + np.array(S['pal'][-1][1]) * 0.7 * mk; em = em * (1 - mk * 0.8)
     return col, np.ones((h, w), bool), em
 
 
@@ -153,10 +153,10 @@ def plume_tex(S, L, wg):
     g = wg(y); xr = xn * g; ax = np.abs(xr)
     T = 0.1 + 0.6 * y + 0.3 * (ax / g) ** 2
     s = (y * L - 1.2 * ax) / 0.02; idx = np.floor(s).astype(int) % 997
-    lens = rng.uniform(0.25, 1.0, 997) ** 0.7; gap = rng.uniform(0, 1, 997)
+    lens = rng.uniform(0.4, 1.0, 997) ** 0.6; gap = rng.uniform(0, 1, 997)
     blen = lens[idx] * g * 0.95 * sstep(0.0, 0.05, y) * (1 - 0.55 * sstep(0.62, 0.76, y))
-    fil = ((s % 1) < 0.5 + 0.5 * (gap[idx] < 0.6)) & (ax < blen)                 # a frayed vane: barbs in locks, gaps between
-    shaft = ax < 0.0065 * (1.2 - 0.6 * y)
+    fil = ((s % 1) < 0.6 + 0.4 * (gap[idx] < 0.75)) & (ax < blen)                 # a frayed vane: barbs in locks, gaps between
+    shaft = ax < 0.011 * (1.2 - 0.5 * y)
     ye, Re = 0.865, 0.105
     r = np.sqrt(xr ** 2 + ((y - ye) * L * 0.5) ** 2) / Re
     fray = 0.5 + 0.5 * np.sin(2 * pi * ((y - ye) * L * 1.2 + 1.0 * ax) / 0.016)
@@ -166,11 +166,11 @@ def plume_tex(S, L, wg):
     col = ramp(S['pal'], T) * (0.8 + 0.2 * (s % 1 < 0.25))[..., None]
     col[shaft] = ramp(S['pal'], T - 0.35)[shaft]
     # the eye: white-hot core, a ring of blue flame, a dark iris, a gold ring, a frayed crimson rim
-    rings = [(0, (1, 1, .92)), (.13, (1, .96, .62)), (.26, (1, .62, .12)), (.335, (.3, .75, 1)), (.39, (.1, .25, .8)), (.44, (.22, .02, .08)), (.56, (.34, .03, .05)),
+    rings = [(0, (1, 1, .9)), (.1, (1, .95, .6)), (.24, (1, .66, .14)), (.34, (.98, .34, .04)), (.4, (.5, .04, .04)), (.44, (.22, .02, .06)), (.56, (.34, .03, .05)),
              (.62, (1, .85, .35)), (.72, (1, .6, .1)), (.86, (.9, .25, .04)), (1.1, (.6, .05, .03))]
     ec = ramp([(a / 1.1, b) for a, b in rings], r / 1.1) * (0.85 + 0.15 * fray)[..., None]
     col[eye] = ec[eye]
-    eg = [(0, (1, 1, .9)), (.13, (1, .9, .5)), (.26, (1, .5, .08)), (.335, (.15, .55, 1)), (.39, (.03, .1, .6)), (.44, (.05, 0, 0)), (.56, (.1, 0, 0)), (.62, (1, .7, .2)), (.72, (1, .4, .05)), (1.1, (.7, .1, .02))]
+    eg = [(0, (1, 1, .9)), (.1, (1, .9, .5)), (.24, (1, .5, .08)), (.34, (.9, .2, .02)), (.4, (.2, .01, 0)), (.44, (.05, 0, 0)), (.56, (.1, 0, 0)), (.62, (1, .7, .2)), (.72, (1, .4, .05)), (1.1, (.7, .1, .02))]
     em = ramp(S['glow'], T) * (0.55 * fil + 1.0 * shaft + 0.8 * tip)[..., None]
     em[eye] = (ramp([(a / 1.1, b) for a, b in eg], r / 1.1))[eye]
     return col, alpha, em * S['em']
@@ -211,7 +211,7 @@ def paint(name, S, plume_L, wg, eye_p, eye_u):
     for i in range(6): put(f'prim{i}', feather(S, 56, 512, 0.36 + 0.03 * i, 0.9 + 0.035 * (i % 3) + (0.04 if i > 2 else 0), 'finger' if i > 2 else 'prim', 20 + i, 5.5, asym=0.62))
     for i in range(4): put(f'sec{i}', feather(S, 72, 384, 0.26 + 0.04 * i, 0.82 + 0.03 * i, 'sec', 30 + i, 4.2, asym=0.8))
     for i in range(2): put(f'ret{i}', feather(S, 72, 384, 0.24 + 0.1 * i, 0.8 + 0.14 * i, 'sec', 40 + i, 4.0))
-    for i in range(3): put(f'crest{i}', feather(S, 64, 384, 0.02, 0.72 + 0.08 * i, 'flame', 50 + i, 5, em=1.5, rag=0.3))
+    for i in range(3): put(f'crest{i}', feather(S, 64, 384, 0.4, 0.9 + 0.04 * i, 'flame', 50 + i, 5, em=1.5, rag=0.3))
     put('wisp', feather(S, 48, 512, 0.0, 0.8, 'flame', 58, 7, em=1.6, rag=0.2))
     for i in range(3): put(f'great{i}', feather(S, 80, 192, 0.3 + 0.06 * i, 0.64 + 0.08 * i, 'cov', 60 + i, 2.6, em=1.0))
     for i in range(3): put(f'med{i}', feather(S, 80, 128, 0.24 + 0.06 * i, 0.52 + 0.08 * i, 'cov', 70 + i, 2.0, em=1.0))
@@ -328,7 +328,7 @@ def build(name):
     pf = lambda f: float(np.interp(f, [r[0] for r in ring], par))                 # along the body by how far forward
     eye_k = min(range(NR), key=lambda k: abs(ring[k][0] - 0.765)); eye_p = par[eye_k]; eye_a = rad(24); eye_u = (eye_a + pi / 2) / (2 * pi)
     plume_L = max(S['plume']) if S['plumes'] else 1
-    wg = lambda y: 0.05 + 0.035 * y + 0.1 * np.exp(-((y - 0.865) / 0.085) ** 2)
+    wg = lambda y: 0.062 + 0.035 * y + 0.1 * np.exp(-((y - 0.865) / 0.085) ** 2)
     tex = paint(name, S, plume_L, wg, eye_p, eye_u)
     if '--tex' in sys.argv: print('textures', tex); return None
     body_uv = lambda k, a: ((a * 512) / A, 1 - ((1 - k) * 511 + 0.5) / A)

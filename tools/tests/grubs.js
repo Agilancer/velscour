@@ -62,23 +62,24 @@ const MOBILE = process.argv.includes('mobile'), SHOTS = !process.argv.includes('
       const kinds = () => w.creatures.filter((c) => c.grub && !c.dead).map((c) => c.grub.kind);
       const cast = async () => { // one cast that lands: wait out the cooldown and the cast time
         const n0 = w.creatures.filter((c) => c.grub).length;
-        for (let i = 0; i < 80; i++) { p.cooldowns = {}; p.tryUseSkill(sk, p.x + 1.5, p.y + 0.5); await new Promise((r) => setTimeout(r, 50)); if (w.creatures.filter((c) => c.grub).length > n0) break; }
+        for (let i = 0; i < 80; i++) { p.cooldowns = {}; p.tryUseSkill(sk, p.x + 1.5, p.y + 0.5); await new Promise((r) => setTimeout(r, 50)); if (w.creatures.filter((c) => c.grub).length > n0 || p._grubRouse) break; }
         await new Promise((r) => setTimeout(r, 60));
       };
       const steps = [];
-      for (let i = 0; i < 10; i++) { await cast(); steps.push(kinds().length); }
-      const ten = kinds();
-      await cast(); await cast();
-      const after = kinds();
-      return { steps, ten, after, name: sk.name, id: sk.id };
+      for (let i = 0; i < 4; i++) { await cast(); steps.push(kinds().length); }
+      const ten = kinds(), ids = w.creatures.filter((c) => c.grub && !c.dead).map((c) => c.id).join();
+      p._grubRouse = 0; await cast();
+      const after = kinds(), same = ids === w.creatures.filter((c) => c.grub && !c.dead).map((c) => c.id).join();
+      return { steps, ten, after, same, roused: !!p._grubRouse, name: sk.name, id: sk.id };
     });
     if (brood.err) throw new Error(brood.err);
     const count = (l, k) => l.filter((x) => x === k).length;
     console.log('  info brood after each cast:', brood.steps.join(' '), '|', brood.ten.join(','));
-    ok(brood.ten.length === 10, `ten casts, ten grubs (${brood.ten.length})`);
+    ok(brood.steps[0] === 3 && brood.ten.length === 10, `three hatch a cast, four casts fill the brood (${brood.steps.join(' ')})`);
     ok(['yellow', 'green', 'orange', 'brown', 'pink'].every((k) => count(brood.ten, k) === 1), 'exactly one of each coloured grub');
     ok(count(brood.ten, 'white') === 5, `the rest are white (${count(brood.ten, 'white')})`);
-    ok(brood.after.length === 10 && ['yellow', 'green', 'orange', 'brown', 'pink'].every((k) => count(brood.after, k) === 1), 'more casts never pass ten and never replace a coloured grub');
+    ok(brood.same && brood.roused, 'a cast on a full brood rouses it and throws no grub away');
+    ok(brood.after.length === 10, 'more casts never pass ten');
     await page.waitForTimeout(1500);
     const vp = page.viewportSize();
     if (SHOTS) await page.screenshot({ path: `${OUT_DIR}/grubs_brood.png` });

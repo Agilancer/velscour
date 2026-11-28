@@ -25,7 +25,7 @@ random.seed(13)
 rnd = random.uniform
 
 # ---- measures (Blender: z up, it faces -y). The origin is where the hand holds the grip ring; all hangs below.
-SS = 0.42; SC = V((0, -0.012, -0.955))                 # the skull: its own unit (1 = its width) and its cranium's centre
+SS = 0.42; SC = V((0, -0.012, -0.935))                 # the skull: its own unit (1 = its width) and its cranium's centre
 def sk(p): return SC + V(p) * SS
 R = 0.34; ZT = -0.62; ZB = -1.41                        # cage: post circle, top and bottom of the posts
 POST = [math.radians(a) for a in (-120, -60, 0, 60, 120, 180)]   # the door hangs between the first two
@@ -222,18 +222,18 @@ def hp_skull():
     ell(B, (0, 0.12, -0.2), (0.4, 0.42, 0.2))                                     # the base
     for s in (1, -1):
         ell(B, (s * 0.21, -0.545, 0.035), (0.2, 0.085, 0.065), (0, -s * 0.32, s * 0.1))   # brow ridges, slanted down to the nose: a scowl
-        ell(B, (s * 0.385, -0.39, -0.26), (0.13, 0.13, 0.11))                     # cheekbones
+        ell(B, (s * 0.39, -0.41, -0.27), (0.14, 0.13, 0.1))                     # cheekbones
         ell(B, (s * 0.44, -0.36, -0.08), (0.06, 0.08, 0.17))                      # the orbit's outer rim
         for a, b in zip(*(lambda P: (P, P[1:]))([(s * 0.44, -0.33, -0.27), (s * 0.5, -0.12, -0.25), (s * 0.5, 0.1, -0.22), (s * 0.45, 0.2, -0.2)])):
             B.chain(sk(a), sk(b), 0.05 * SS)                                      # the arch back to the ear
         ell(B, (s * 0.36, 0.26, -0.33), (0.1, 0.12, 0.14))                        # mastoid
     ell(B, (0, -0.58, -0.05), (0.075, 0.08, 0.11))                                # nasal bones
-    ell(B, (0, -0.36, -0.42), (0.29, 0.25, 0.25))                                 # the upper jaw
-    for p in arch(13, 0.245, 0.225, -0.36, -0.6): B.ball(sk(p), 0.075 * SS, 2)    # the ridge the teeth stand in
+    ell(B, (0, -0.36, -0.4), (0.27, 0.235, 0.24))                                 # the upper jaw
+    for p in arch(13, 0.245, 0.225, -0.36, -0.6): B.ball(sk(p), 0.052 * SS, 2)    # the ridge the teeth stand in
     o = B.object('skull_hp', MATS)
     voxel(o, 0.012 if FAST else 0.006, 3)
     for s in (1, -1):
-        carve(o, cutter((s * 0.215, -0.56, -0.13), (0.165, 0.27, 0.15), (0, -s * 0.25, 0)))   # the sockets
+        carve(o, cutter((s * 0.22, -0.56, -0.14), (0.18, 0.27, 0.17), (0, -s * 0.22, 0)))   # the sockets
         carve(o, cutter((s * 0.055, -0.6, -0.38), (0.06, 0.2, 0.12), (0, s * 0.35, 0)))       # the nose, an upturned heart
         carve(o, cutter((s * 0.6, -0.2, -0.05), (0.2, 0.2, 0.26)))                             # the temples
         carve(o, cutter((s * 0.5, -0.2, -0.44), (0.16, 0.3, 0.14)))                            # under the arches
@@ -279,7 +279,7 @@ def teeth():
                 p = c + V((0, 0, z0 + ln * t)) + out * 0.012 * t
                 rings.append([sk(p + side * w * k * sx + o2 * d * k * sy) for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
             B.loft(rings, True, cap1=True)
-    row('skull', 14, 0.245, 0.225, -0.63, -0.775, {3, 11})
+    row('skull', 14, 0.245, 0.225, -0.6, -0.775, {3, 11})
     row('jaw', 14, 0.228, 0.208, -0.84, -0.735, {5, 6, 12})
     return B.object('teeth', MATS)
 
@@ -288,7 +288,6 @@ def souls():
     """Soul-fire where the light comes from: an orb deep in each socket, a wedge in the nose, a mass behind the teeth."""
     B = Build(); B.use('soul', 'skull')
     for e in EYES: B.ball(e + V((0, -0.004, 0)), 0.024, 2)
-    B.ball(NOSE + V((0, 0.05, 0)), 0.02, 1, (1, 1, 1.4))
     B.ball(sk((0, -0.3, -0.74)), SS, 2, (0.17, 0.2, 0.1))
     return B.object('souls', MATS)
 
@@ -393,9 +392,9 @@ def ironwork():
     for s, x in ((1, x0), (-1, x1)):
         B.tube([V((x, y, zt)), V((x + s * 0.008, y, zt + 0.07)), V((x + s * 0.05, y, zt + 0.125)), V((0, y, -0.672))], 0.0095, 4, smooth=False)
     B.tube([V((0, y, -0.672)), V((0, y - 0.004, -0.72)), V((0, y - 0.006, -0.765))], [0.009, 0.007, 0.002], 4, smooth=False)   # a fang from the arch's point
-    for z in (zb, zb + 0.07): B.tube([V((x0, y, z)), V((x1, y, z))], 0.0095, 4, smooth=False)
+    for z in (zb,): B.tube([V((x0, y, z)), V((x1, y, z))], 0.0095, 4, smooth=False)
     for k in range(1, 6):
-        x = x0 + (x1 - x0) * k / 6; B.tube([V((x, y, zb)), V((x, y, zb + 0.085)), V((x, y, zb + 0.12))], [0.007, 0.0075, 0.001], 4, smooth=False)
+        x = x0 + (x1 - x0) * k / 6; B.tube([V((x, y, zb)), V((x, y, zb + 0.04)), V((x, y, zb + 0.075))], [0.007, 0.0075, 0.001], 4, smooth=False)
     for z in (-0.95, -1.2): B.tube([V((x0 - 0.035, y + 0.008, z)), V((x0 + 0.012, y - 0.004, z))], 0.011, 4, smooth=False)   # hinges
     # the padlock on its hasp
     lk = V((x1 + 0.012, y - 0.02, -1.12))

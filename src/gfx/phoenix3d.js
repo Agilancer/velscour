@@ -321,7 +321,7 @@ function drawCodeBird(ctx, x, y, o = {}) {
 }
 
 // ------------------------------------------------------------------ the Blender-built phoenix
-const MODEL = 'phoenix', UNIT = 17.5;                    // px per model unit for each of the old bird's units: half again its wingspan
+const MODEL = 'phoenix', UNIT = 20.5;                    // px per model unit for each of the old bird's units: half again its wingspan
 const TIPS = ['tip_L', 'tip_R'], PLUMES = [0, 1, 2, 3, 4, 5, 6].map((i) => 'tailtip' + i), PTS = [...TIPS, ...PLUMES, 'crown'];
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const qmul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
@@ -379,7 +379,7 @@ function modelBird(ctx, x, y, o) {
  * Draw the phoenix with its body centre at (x, y) (current ctx units). o: { yaw (heading along the tiles, radians),
  * pitch (+: nose down), roll (+: the left wing up), flap (wing-beat phase: wings up at pi/2), amp (beat strength 0..1,
  * low = gliding), fold (0 open .. 1 swept back for the stoop), t (seconds, sways the plumes), k (px per unit; the
- * wingspan is about 77 units), heat (0..1, it burns brighter), lean (radians its back tips toward the camera,
+ * wingspan is about 90 units), heat (0..1, it burns brighter), lean (radians its back tips toward the camera,
  * default 0.35), key (a name per bird when several fly), clip + ct (one of the model's own clips at ct seconds:
  * hover, strike, screech, flare), code: true for the old code-built bird }. Returns false when WebGL is missing.
  */

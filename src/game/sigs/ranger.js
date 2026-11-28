@@ -7,13 +7,13 @@
 import { G, stat, power, sigO, toughest, foesNear, headAt, glow, rand, TAU } from './common.js';
 import { isoX, isoY, HW, HH, camera } from '../../core/view.js';
 import { sfx } from '../../core/audio.js';
-import { addEffect, Ring, floatText, spawn, burst } from '../../gfx/vfx.js';
+import { addEffect, addDecal, Ring, floatText, spawn, burst } from '../../gfx/vfx.js';
 import { hit } from '../combat.js';
 import { drawPhoenix3D, phoenixPoints, PHOENIX_TILE } from '../../gfx/phoenix3d.js';
 
 const FEATHERS = 6, HAWK_Z = 96, GREEN = '#7ccf5a', CREAM = '#f0e6c8', GOLD = '#ffd25a', FLAME = '#ff7a1c';
 const EMBERS = ['#fff0a0', '#ffd050', '#ffa028', '#ff6414'];
-const phoenixK = () => (G.touch ? 1.05 : 1.3);   // px per unit: a wingspan of ~80 px on phones, ~100 on desktop
+const phoenixK = () => (G.touch ? 1.05 : 1.3);   // px per unit: a wingspan of ~95 px on phones, ~117 on desktop
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 /** The flat bird for when WebGL is missing, in screen space: wings spread (k = flap) or folded (fold = 1) into a stoop. */
@@ -60,9 +60,10 @@ class Stoop {
       if (!q.dead) hit(p, q, P * 8, 'phys', sigO({ bleed: true, knock: 0.6 }));
       for (const c of foesNear(p, q.x, q.y, 2.2).filter((c) => c !== q).slice(0, 2)) { hit(p, c, P * 3, 'phys', sigO({ bleed: true })); featherBurst(c.x, c.y, 26, 5); }
       featherBurst(q.x, q.y, 30, G.touch ? 10 : 20);
-      addEffect(new Ring(q.x, q.y, 0.1, 1.8, 0.35, GOLD, 4));
+      addEffect(new Ring(q.x, q.y, 0.1, 1.9, 0.45, GOLD, 4)); addEffect(new Ring(q.x, q.y, 0.2, 2.6, 0.8, FLAME, 2.5));
+      addDecal(q.x, q.y, 'rgba(10,6,4,0.6)', 0.9, 'scorch', 0.7);   // the ground burns where it struck
       burst(q.x, q.y, 26, 'blood', 12, 3); burst(q.x, q.y, 30, 'fire', G.touch ? 8 : 16, 3.5);
-      camera.shake(5); sfx('crit', 0.9);
+      camera.shake(7); sfx('crit', 0.9);
     }
     if (k >= 1) { s.hz += dt * 160; s.dive = null; return this.t < this.dur + 0.4 ? true : false; }
     spawn({ type: 'flame', x: s.hx + rand(-0.12, 0.12), y: s.hy + rand(-0.12, 0.12), z: s.hz + rand(-4, 4), vz: rand(0, 20), life: rand(0.25, 0.45), size: rand(2.4, 3.6), size1: 0.6, add: true });   // a comet's tail
@@ -164,8 +165,8 @@ export default {
     // the phoenix itself, with its shadow on the floor
     const hx = isoX(s.hx, s.hy), hy = isoY(s.hx, s.hy), heat = s.feathers / FEATHERS;
     const near = 1 - 0.5 * Math.min(1, s.hz / HAWK_Z);   // the shadow tightens and darkens as it comes down
-    ctx.globalAlpha = 0.2 + 0.2 * near; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(hx, hy, 18 * (1.4 - near * 0.5), 6.5 * (1.4 - near * 0.5), 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
-    glow(ctx, FLAME, hx, hy, 30, 0.1 + 0.12 * heat);   // its firelight on the floor
+    ctx.globalAlpha = 0.2 + 0.2 * near; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(hx, hy, 22 * (1.4 - near * 0.5), 8 * (1.4 - near * 0.5), 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+    glow(ctx, FLAME, hx, hy, 46, 0.16 + 0.14 * heat); glow(ctx, GOLD, hx, hy, 22, 0.1 + 0.1 * heat);   // its firelight on the floor
     glow(ctx, FLAME, hx, hy - s.hz, 44, 0.28 + 0.25 * heat + s.flash * 0.4);
     if (!drawPhoenix3D(ctx, hx, hy - s.hz, this.pose(s, t))) drawHawk(ctx, hx, hy - s.hz, s.head || 0, s.flap, s.fv, G.touch ? 1.6 : 2);
     glow(ctx, GOLD, hx, hy - s.hz, 18, 0.08 + 0.2 * heat + s.flash * 0.3);

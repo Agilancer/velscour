@@ -21,12 +21,12 @@ V = lambda x, z, y=0.0: Vector((x, y, z))
 SH, EL, WR = V(0.05, 0.0), V(0.30, 0.30, 0.03), V(0.50, 0.66)
 ANCHOR = V(0.05, -0.40)
 FINGERS = [  # mid joint, tip
-    (V(0.92, 0.88), V(1.40, 0.72)),
-    (V(0.90, 0.52), V(1.26, 0.06)),
-    (V(0.74, 0.22), V(0.92, -0.42)),
-    (V(0.53, 0.10), V(0.50, -0.60)),
+    (V(0.92, 0.88, -0.06), V(1.38, 0.72, -0.24)),
+    (V(0.90, 0.52, -0.05), V(1.25, 0.06, -0.2)),
+    (V(0.74, 0.22, -0.03), V(0.92, -0.42, -0.13)),
+    (V(0.53, 0.10, -0.01), V(0.50, -0.60, -0.05)),
 ]
-THUMB = [WR, V(0.50, 0.84, -0.05), V(0.62, 0.98, -0.12)]
+THUMB = [WR, V(0.48, 0.90, -0.08), V(0.66, 1.08, -0.2)]
 SPUR = [EL, V(0.34, 0.18, 0.06), V(0.40, 0.12, 0.08)]
 FOLD = dict(arm1=45, arm2=110, f=[-74, -82, -90, -99])  # world directions (degrees above +x) of the folded wing
 
@@ -101,7 +101,7 @@ def build_wing():
                 s = 0.03 + (smax - 0.03) * js / NS
                 pa, sa, ta = poly(A, s); pb, sb, tb = poly(B, s if p < 3 else s * 1.0)
                 pos = pa.lerp(pb, u)
-                pos.y += 0.05 * math.sin(math.pi * u) * (0.3 + s) + 0.012 * math.sin(js * 1.7 + iu)  # the membrane bellies back between the fingers
+                pos.y += 0.1 * math.sin(math.pi * u) * (0.3 + s) + 0.012 * math.sin(js * 1.7 + iu)  # the membrane bellies back between the fingers
                 row.append(M.vert(pos, blendw(wfun[p](sa, ta), wfun[p + 1](sb, tb), u)))
             grid.append(row)
             edges.append((M.v[row[-1]].x, M.v[row[-1]].z))
@@ -118,15 +118,15 @@ def build_wing():
     for iu in range(4):
         for js in range(4): M.f.append((grid[iu][js], grid[iu + 1][js], grid[iu + 1][js + 1], grid[iu][js + 1]))
     # bones: the arm, thick at the joints
-    M.tube([SH, SH.lerp(EL, 0.5), EL], [0.04, 0.026, 0.034], [{'arm1': 1}, {'arm1': 1}, {'arm1': 0.5, 'arm2': 0.5}])
-    M.tube([EL, EL.lerp(WR, 0.5), WR], [0.034, 0.022, 0.032], [{'arm1': 0.5, 'arm2': 0.5}, {'arm2': 1}, {'arm2': 1}])
+    M.tube([SH, SH.lerp(EL, 0.5), EL], [0.056, 0.038, 0.048], [{'arm1': 1}, {'arm1': 1}, {'arm1': 0.5, 'arm2': 0.5}])
+    M.tube([EL, EL.lerp(WR, 0.5), WR], [0.048, 0.032, 0.044], [{'arm1': 0.5, 'arm2': 0.5}, {'arm2': 1}, {'arm2': 1}])
     for i, (m, t) in enumerate(FINGERS):
         a, b = f'f{i + 1}a', f'f{i + 1}b'
         r = 0.026 - i * 0.002
         tip = t + ((t - m).normalized() + Vector((-0.25, 0, -0.5))).normalized() * 0.11  # the talon runs on past the membrane
         M.tube([WR, WR.lerp(m, 0.5), m, m.lerp(t, 0.5), t, tip], [r * 1.1, r * 0.75, r * 0.95, r * 0.55, r * 0.5, 0.001],
                [{a: 1}, {a: 1}, {a: 0.5, b: 0.5}, {b: 1}, {b: 1}, {b: 1}], sides=5)
-    M.tube(THUMB, [0.034, 0.022, 0.001], [{'thumb': 1}] * 3, sides=5)
+    M.tube(THUMB, [0.046, 0.03, 0.001], [{'thumb': 1}] * 3, sides=5)
     M.tube(SPUR, [0.03, 0.016, 0.001], [{'arm1': 1}] * 3, sides=5)
     return M, edges
 
@@ -155,7 +155,7 @@ def paint(edges):
     def limb(pts, w):
         for i in range(len(pts) - 1): bd.line([P(pts[i]), P(pts[i + 1])], fill=255, width=w)
         for p in pts[:-1]: x, y = P(p); bd.ellipse([x - w * 0.7, y - w * 0.7, x + w * 0.7, y + w * 0.7], fill=255)
-    limb([SH, EL, WR], 36)
+    limb([SH, EL, WR], 50)
     for m, t in FINGERS: limb([WR, m, t, t + ((t - m).normalized() + Vector((-0.25, 0, -0.5))).normalized() * 0.11], 22)
     limb(THUMB, 26); limb(SPUR, 22)
     # veins: branching from every finger into the web on both sides

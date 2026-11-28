@@ -27,7 +27,7 @@ import { setupScenario, scenarioTick } from './scenarios.js';
 import { smiteKill } from './smite.js';
 import { greedTick } from './greed.js';
 import { worldHeresies } from './heresies.js';
-import { impDeathFx, impEscapeFx, preloadImp } from '../gfx/treasureimp3d.js';
+import { impDeathFx, impEscapeFx, impTelegraph, preloadImp } from '../gfx/treasureimp3d.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -373,6 +373,7 @@ function impTick(world, dt) {
   m.status.fear = { t: 1 }; // it always runs from the hero
   if (chance(dt * 8)) sparkle(m.x, m.y, 20, '#ffd040', 1, 0.3);
   if (chance(dt * 1.2)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: impGold(world, depthLevel(world.depth), 5 + depthLevel(world.depth) * 1.5) }));
+  if (H.impLeft <= 0.6 + dt) impTelegraph(m); // a cackle before the leap (looks only: the clock is as before)
   if ((H.impLeft -= dt) <= 0) {
     addEffect(new Ring(m.x, m.y, 2, 0.1, 0.5, '#ffd040', 4)); addEffect(new Column(m.x, m.y, '#ffd040', 0.5, 20, 240));
     floatText(m.x, m.y, 70, 'Escaped!', '#ffd040', 14, { life: 1.6 });
